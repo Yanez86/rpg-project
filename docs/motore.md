@@ -103,3 +103,5 @@ Sono in `reference/valfiorita-pioggia.html` e vanno estratti quando servono, seg
 ## Usare il motore in una pagina "classica"
 
 Le scene di `reference/` caricano three r128 come variabile globale (`window.THREE`). Per aggiungerci oggetti del motore (es. le comparse di `reference/valfiorita-sole.html`) l'import map punta `three` a `engine/tools/three-global.js`, che riesporta il three globale: pagina e moduli usano così la stessa copia di three. La pagina espone `window.VF` (scena, camera, `groundAt`, `collide`, `player`, `setEye`, `onTick`) e un modulo come `reference/gente-sole.js` ci aggancia i personaggi. `node --import ./test/register.mjs test/gente-sole.mjs` ne fa la prova di fumo.
+
+La **Locanda del Boccale** (`scene/locanda.html`) è nata come scena autonoma, prima del motore a moduli: i suoi pezzi vanno ancora portati in moduli. Sono le luci d'interno a rotazione per stanza, le fiamme a pixel, il `wear()` con la fuliggine, muri con aperture, finestre e porte viste da dentro, scala e ringhiera, camino, lampadario a ruota, lanterna a olio, candele, tavoli e sedute, bancone, cucina, letto e stoviglie. Le ricette sono in `docs/oggetti.md`.
