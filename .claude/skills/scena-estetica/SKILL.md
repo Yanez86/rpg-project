@@ -10,7 +10,8 @@ Prima di scrivere codice grafico:
 1. Leggi `docs/estetica.md`: principi, palette, texture, materiali, luce, post-processing.
 2. Se crei un oggetto, cerca la sua ricetta in `docs/oggetti.md`; se non c'è, segui le regole comuni in cima a quel file e aggiungi la ricetta nuova al file.
 3. Leggi `docs/errori-noti.md` per evitare le trappole già incontrate.
-4. Usa `reference/valfiorita-pioggia.html` come implementazione di riferimento: riusa le funzioni (`pix`, `wear`, `hangSign`, `tree`, `flower`, `bench`, ecc.) invece di riscriverle.
+4. Usa il motore in `engine/src/` (guida in `docs/motore.md`): importa da `engine/src/index.js` le funzioni esistenti (`pix`, `wear`, `tm`, `P`, `hangSign`, `tree`, `flower`, `bench`, `house`, ecc.) invece di riscriverle. Un oggetto nuovo diventa un modulo nuovo, esportato da `index.js`. Per ciò che non è ancora un modulo, il riferimento è `reference/valfiorita-pioggia.html`.
+5. Dopo le modifiche esegui `cd engine && npm test` (e `--notte`).
 
 ## Controlli prima di consegnare
 - Nessuna forma primitiva nuda come forma finale; parti separate e leggibili.

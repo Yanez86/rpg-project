@@ -1,0 +1,85 @@
+# Il motore: guida ai moduli
+
+Il codice della scena di riferimento è diviso in moduli ES in `engine/src/`. Tutto si importa da `engine/src/index.js`.
+Three.js **r128** viene da CDN tramite *import map* (vedi `engine/demo/index.html`).
+
+## Come si compone una scena (ordine obbligatorio)
+
+```js
+import * as THREE from 'three';
+import { E, initContext, createTextures, setupAtmosphere, house, tree, bake, createPost /* … */ } from '../src/index.js';
+
+initContext({ renderer, scene, camera, mood: 'rain' }); // oppure 'night'
+const atmosphere = setupAtmosphere();   // 1. nebbia e luci (imposta E.fog, che gli shader leggono)
+createTextures();                       // 2. texture (prima di qualsiasi materiale)
+// 3. il mondo: tutto ciò che è statico va in un gruppo `world`
+const world = new THREE.Group(); scene.add(world);
+house(world, 6, 0, { rotY: -Math.PI / 2, front: true });
+tree(world, 14, 8);
+bake(world);                            // 4. unione statica per materiale (dopo aver costruito tutto)
+// 5. effetti e post-processing
+const post = createPost();
+function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render(); requestAnimationFrame(tick); }
+```
+
+- **`E` (core/context.js)** è il contesto condiviso: scena, renderer, camera, `mood`, colore e densità della nebbia, `time` (uniform del tempo), e le liste riempite dagli oggetti:
+  - `swing`: insegne e lanterne che dondolano;
+  - `dripPoints`: gronde;
+  - `chimneys`: comignoli;
+  - `crowns`: chiome degli alberi;
+  - `obstacles`: ostacoli;
+  - `lights`: sorgenti di luce per la notte.
+- **`rnd()`** è seminato: lo stesso codice genera sempre lo stesso mondo. `setSeed(n)` cambia il mondo.
+
+## Moduli
+
+| Modulo | Esporta | Note |
+|---|---|---|
+| `core/context.js` | `E`, `initContext` | contesto condiviso |
+| `core/rng.js` | `rnd`, `R`, `pick`, `hn`, `vnoise`, `setSeed` | casuale seminato, hash, value noise |
+| `core/geometry.js` | `V`, `PI`, `B`, `uvB`, `CY`, `CO`, `SP`, `TO`, `uvS`, `mergeGeometries` | scorciatoie |
+| `core/bake.js` | `bake(group)` | unione statica; **perde i colori per vertice** |
+| `textures/pix.js` | `pix(S, fn)`, `G` | pixel-art con hue shift automatico |
+| `textures/library.js` | `TEX`, `createTextures()` | tegole, pietra, ciottoli, erba, terra, legno, intonaco, edera, foglie, corteccia, betulla, vetro |
+| `materials/palette.js` | `WALLS`, `ROOFS`, `SHUT`, `DOORS`, `TIMBER`, `STONE`, `IRON`, `BRASS`, `BANNERS`, `BUNTING`, `GRASS`, `FOLIAGE`, `GLASS`, `LIT`, `mute` | palette |
+| `materials/wear.js` | `wear(material)` | usura in shader |
+| `materials/factory.js` | `tm(color, o)`, `P(parent, geo, color, x, y, z, o)`, `vertexColorMaterial`, `ivyMaterial` | materiali condivisi; di notte Phong |
+| `props/sign.js` | `hangSign(parent, base, dir, len, kind)`, `iconTex`, `boardGeo`, `ICONS`, `HOUSE_ICONS` | insegne appese |
+| `props/lantern.js` | `paperLantern()`, `wallLantern(parent, x, y, z)` | lanterne di carta |
+| `props/bench.js` | `bench(parent, x, y, z, rotY)` | panchina |
+| `props/flowers.js` | `flower`, `flowerBed`, `flowerField(spots)`, `FLOWER_TYPES`, `FLOWER_COLS` | fiori modellati |
+| `props/containers.js` | `barrel`, `crate`, `sack`, `basket` | contenitori |
+| `buildings/house.js` | `house(parent, x, z, {rotY, front, type})`, `win`, `door`, `gable`, `chimney`, `timberHouse`, `roundHouse`, `tallHouse`, `houseDetails` | la facciata guarda verso +z locale |
+| `vegetation/trees.js` | `tree(parent, x, z, {kind, nearWater})`, `fir`, `SPECIES`, `TREE_KINDS`, `leafMat` | alberi procedurali |
+| `vegetation/grass.js` | `grassField({count, radius, center, ok, tall, flowers})` | erba e prato fiorito istanziati |
+| `vegetation/undergrowth.js` | `undergrowth(parent, {area, ok, nearPath, reeds, counts})` | felci, funghi, massi, foglie, sassolini, canne |
+| `world/terrain.js` | `createTerrain({size, segments, center, radius, flat, dirt, damp})` | terreno a macchie |
+| `world/path.js` | `path(parent, ax, az, bx, bz, w)` | sentiero con solchi bagnati |
+| `world/bridge.js` | `stoneBridge(parent, x, z, rotY)`, `bridgeDeck(z)` | ponte lungo z locale, 7,2 m |
+| `world/cliffs.js` | `distantCliffs({center, layers})` | pareti lontane a strati |
+| `water/water.js` | `Sim`, `waterSurface`, `waterRibbon`, `puddle`, `puddleMaterial` | acqua simulata, cascate, pozzanghere |
+| `fx/particles.js` | `PS`, `particleTextures`, `setParticleScale` | particelle a punti |
+| `fx/soft.js` | `softSys`, `smokeAndFog({litBy})` | fumo dei comignoli e banchi di nebbia |
+| `fx/rain.js` | `createRain({groundAt, litBy})` | pioggia, schizzi, gocce dalle grondaie |
+| `fx/sky.js` | `createSky()` | cielo coperto (o notturno) |
+| `fx/swing.js` | `updateSwing(T)` | oscillazione di insegne e lanterne |
+| `render/lighting.js` | `setupAtmosphere()` | nebbia e luci per `E.mood` |
+| `render/post.js` | `createPost({pixelRatio, reflections, scanlines})` | SSAO, SSR, foschia, bloom, grading, scanlines |
+| `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
+| `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
+
+Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine/demo/main.js`) mostra l'ordine completo.
+
+## Avviare la demo
+
+I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un server qualsiasi, per esempio `npx serve engine` oppure `python3 -m http.server -d engine`, e apri `/demo/`. Aggiungi `#notte` all'indirizzo per la versione notturna.
+
+## Test
+
+`cd engine && npm test` esegue la demo in Node con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
+Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, import ed export sbagliati), non errori degli shader.
+
+## Cosa non è ancora un modulo
+
+Gli elementi unici della scena di riferimento: fontana a tre vasche, torre del mago, mulino, bancarelle del mercato, lampioni, festoni con bandierine, pozzo, carretto, bacheca, petali che cadono.
+Sono in `reference/valfiorita-pioggia.html` e vanno estratti quando servono, seguendo lo stesso schema.

@@ -6,6 +6,10 @@ Motore e grafica di un gioco di ruolo fantasy con l'estetica di **Valfiorita sot
 
 | Percorso | Contenuto |
 |---|---|
+| `engine/src/` | **Il motore, diviso in moduli ES**: texture, materiali, oggetti, case, vegetazione, terreno, acqua, effetti, post-processing, controlli |
+| `engine/demo/` | Demo "Borgo del Ponte" costruita solo con i moduli (`#notte` per la notte) |
+| `engine/test/` | Prova di fumo in Node (`npm test`) |
+| `docs/motore.md` | Guida ai moduli: come si compone una scena, cosa esporta ogni modulo |
 | `docs/estetica.md` | **La bibbia grafica**: principi, palette, texture, materiali, luce, post-processing, prestazioni |
 | `docs/oggetti.md` | Ricette degli oggetti (case, lanterne, insegne, panchine, alberi, fiori, ponte, terreno, acqua, fumo) |
 | `docs/tecniche.md` | Glossario delle tecniche con i loro nomi |
@@ -16,3 +20,4 @@ Motore e grafica di un gioco di ruolo fantasy con l'estetica di **Valfiorita sot
 | `.claude/skills/scena-estetica/` | Skill per Claude: applica queste regole quando si creano scene o oggetti |
 
 Le scene di riferimento sono file HTML autonomi: si aprono in un browser e caricano Three.js r128 da CDN.
+La demo del motore usa moduli ES: va servita via HTTP (per esempio `python3 -m http.server -d engine`, poi apri `/demo/`).

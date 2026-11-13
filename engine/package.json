@@ -1,0 +1,9 @@
+{
+  "name": "rpg-engine",
+  "private": true,
+  "type": "module",
+  "description": "Motore grafico di rpg-project con l'estetica di Valfiorita",
+  "scripts": {
+    "test": "node --import ./test/register.mjs test/smoke.mjs"
+  }
+}
