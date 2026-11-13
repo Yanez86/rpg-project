@@ -71,7 +71,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
-| `characters/toon.js` | `setToon(root, on, {outline, thickness, color})` | cel shading attivabile: MeshToon a 3 gradini + contorno a scafo invertito di spessore costante sullo schermo; serve una luce direzionale chiave |
+| `characters/toon.js` | `setToon(root, on, {outline})`, `TOON` | cel shading "anime" (stile JRPG) solo sui personaggi: luce propria fissata alla camera, ombra lilla a due toni, rim light, contorno sottile; non tocca le luci della scena. `TOON` contiene i parametri |
 | `controls/thirdPerson.js` | `thirdPerson({canvas, actor, walk, run, collide, stick, knob, actions})` | muovi un personaggio in terza persona; clip automatiche `fermo`/`cammina`/`corre`, azioni da tasto (es. E → `saluta`) |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 

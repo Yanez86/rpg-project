@@ -50,4 +50,4 @@ export { villager, elf, villagerClips } from './characters/villager.js';
 export { loft, taper } from './characters/loft.js';
 export { cat, catClips } from './characters/cat.js';
 export { dragon, dragonClips } from './characters/dragon.js';
-export { setToon } from './characters/toon.js';
+export { setToon, TOON } from './characters/toon.js';

@@ -43,8 +43,8 @@ const actors = {
   elfa: { make: elf, r: 3.3, speed: { cammina: 1.45, corre: 3.6 }, dir: -1, ang: PI * 0.5, home: [0.2, 0, -0.6], face: 0.05 },
   gatto: { make: cat, r: 1.6, speed: { cammina: 0.5, trotta: 1.25 }, dir: -1, ang: PI, home: [1.0, 0, 0.9], face: -0.5 },
 };
-// cel shading: interruttore con una luce chiave che disegna i gradini di luce e ombra
-let toonOn = false; const key = new THREE.DirectionalLight(0xfff0dc, 0.0); key.position.set(4, 7, 5); scene.add(key);
+// cel shading: solo i personaggi cambiano aspetto (hanno una luce loro), la scena resta com'è
+let toonOn = false;
 function spawn(key) {
   const a = actors[key]; const prev = a.c && a.c.anim.current();
   if (a.c) scene.remove(a.c.root);
@@ -52,7 +52,7 @@ function spawn(key) {
 }
 spawn('abitante'); spawn('elfa'); spawn('gatto');
 { const b = document.getElementById('toon'); b.addEventListener('click', () => { toonOn = !toonOn; b.setAttribute('aria-pressed', String(toonOn));
-  for (const a of Object.values(actors)) setToon(a.c.root, toonOn); key.intensity = toonOn ? 0.9 : 0; }); }
+  for (const a of Object.values(actors)) setToon(a.c.root, toonOn); }); }
 for (const b of document.querySelectorAll('[data-actor]')) b.addEventListener('click', () => {
   const a = actors[b.dataset.actor];
   if (b.dataset.clip === 'nuovo') { spawn(b.dataset.actor); return; }
