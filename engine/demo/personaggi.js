@@ -1,11 +1,11 @@
-// Prova dei personaggi: un abitante e un gatto in un angolo di piazza sotto la pioggia.
+// Prova dei personaggi: un abitante, un'elfa e un gatto in un angolo di piazza sotto la pioggia.
 // Trascina per girare attorno, rotellina o pulsanti per avvicinarti. #notte per la notte.
 import * as THREE from 'three';
 import {
   E, initContext, rnd, R, PI, createTextures, bake, P, tm, uvS,
   house, bench, tree, flowerBed, wallLantern, createTerrain, distantCliffs, puddle,
   smokeAndFog, createRain, createSky, updateSwing, setupAtmosphere, createPost, createNightLights,
-  setParticleScale, villager, cat, TEX, wear, mute,
+  setParticleScale, villager, elf, cat, TEX, wear, mute,
 } from '../src/index.js';
 
 const err = document.getElementById('err');
@@ -40,6 +40,7 @@ bake(world);
 /* ---------- i personaggi ---------- */
 const actors = {
   abitante: { make: villager, r: 2.4, speed: { cammina: 1.35, corre: 3.4 }, dir: 1, ang: 0, home: [-0.9, 0, 0.4], face: 0.35 },
+  elfa: { make: elf, r: 3.3, speed: { cammina: 1.45, corre: 3.6 }, dir: -1, ang: PI * 0.5, home: [0.2, 0, -0.6], face: 0.05 },
   gatto: { make: cat, r: 1.6, speed: { cammina: 0.5, trotta: 1.25 }, dir: -1, ang: PI, home: [1.0, 0, 0.9], face: -0.5 },
 };
 function spawn(key) {
@@ -47,7 +48,7 @@ function spawn(key) {
   if (a.c) scene.remove(a.c.root);
   a.c = a.make(); scene.add(a.c.root); a.c.anim.play(prev || 'fermo', 0);
 }
-spawn('abitante'); spawn('gatto');
+spawn('abitante'); spawn('elfa'); spawn('gatto');
 for (const b of document.querySelectorAll('[data-actor]')) b.addEventListener('click', () => {
   const a = actors[b.dataset.actor];
   if (b.dataset.clip === 'nuovo') { spawn(b.dataset.actor); return; }

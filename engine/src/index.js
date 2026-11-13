@@ -46,6 +46,7 @@ export { firstPerson } from './controls/firstPerson.js';
 export { thirdPerson } from './controls/thirdPerson.js';
 
 export { joint, piece, charMat, charTex, makeClip, animator } from './characters/puppet.js';
-export { villager, villagerClips } from './characters/villager.js';
+export { villager, elf, villagerClips } from './characters/villager.js';
+export { loft, taper } from './characters/loft.js';
 export { cat, catClips } from './characters/cat.js';
 export { dragon, dragonClips } from './characters/dragon.js';

@@ -24,7 +24,7 @@ export function charMat(color, map, key) {
 export function charTex(W, H, fn) {
   const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), im = x.createImageData(W, H);
   for (let v = 0; v < H; v++) for (let u = 0; u < W; u++) { const p = fn(u, v), k = (v * W + u) * 4; im.data[k] = p[0]; im.data[k + 1] = p[1]; im.data[k + 2] = p[2]; im.data[k + 3] = 255; }
-  x.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; return t;
+  x.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
 
 /**

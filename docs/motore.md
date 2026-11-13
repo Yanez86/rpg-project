@@ -67,7 +67,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `render/post.js` | `createPost({pixelRatio, reflections, scanlines})` | SSAO, SSR, foschia, bloom, grading, scanlines |
 | `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
 | `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
-| `characters/villager.js` | `villager()`, `villagerClips()` | abitante: `fermo`, `cammina`, `corre`, `saluta` |
+| `characters/villager.js` | `villager()`, `elf()`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta` |
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre" |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |

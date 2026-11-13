@@ -89,12 +89,13 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 - Materiali senza usura (l'usura è legata al mondo), texture pixel-art a colori pieni per volti e pelo.
 - Guardano verso +z, i piedi toccano y=0. Nomi di giunti e clip in italiano.
 
-## Abitante — `villager()`
-- Giunti: `anca`, `busto`, `collo`, `testa`, `mantello`, `spallaS/D`, `gomitoS/D`, `cosciaS/D`, `ginocchioS/D` (S = sinistra = +x).
-- Altezza circa 1,75 m. Tunica con gonnella, cintura con fibbia, tracolla e bisaccia, mantellina e mantello che ondeggia, pantaloni, stivali con risvolto.
-- Volto dipinto 16×16 (frangia, sopracciglia, occhi, naso, bocca, barba facoltativa), naso e orecchie in rilievo.
-- Varianti casuali: carnagione, capelli, colori di tunica, mantello e pantaloni, barba, cappuccio o cappello.
-- Clip: `fermo` (respiro, si guarda attorno), `cammina` (1 s), `corre` (0,62 s, busto in avanti, gomiti piegati), `saluta`.
+## Umanoidi: abitante ed elfa — `villager()`, `elf()`
+- Stesso scheletro e stesse clip: giunti `anca`, `busto`, `collo`, `testa`, `mantello`, `spallaS/D`, `gomitoS/D`, `cosciaS/D`, `ginocchioS/D` (S = sinistra = +x). Clip `fermo`, `cammina`, `corre`, `saluta` generate da `villagerClips({ hip, stride, arm })` con l'altezza dell'anca del personaggio.
+- **Forme morbide con il loft** (asse verticale): bacino e gonna che si allarga, busto con vita, petto e spalle, cintura con fibbia, braccia con manica che si allarga al polso, mano a muffola con pollice, cosce e polpacci con un leggero muscolo, stivale con gambale, risvolto e piede.
+- Testa **sferica** con il volto dipinto su una texture 64×32 che avvolge la sfera (viso centrato sul davanti); naso; capelli fatti di calotta più parte posteriore, che lasciano scoperto il viso.
+- Mantellina a cono sulle spalle e **mantello curvo** (spicchio di cilindro) appeso al giunto `mantello`.
+- **Abitante**: circa 1,75 m, anca a 0,93 m; tunica di lana, tracolla e bisaccia, varianti casuali di carnagione, capelli, vestiti, barba, cappuccio o cappello.
+- **Elfa**: circa 1,9 m, anca a 1,0 m; tutto più snello (busto ×0,84, braccia e gambe ×0,82), gambe più lunghe, collo più lungo, testa un po' più piccola. Abito lungo di stoffa fine che si allarga, bracciali di cuoio, stivali alti, mantello più lungo, capelli lunghi sulla schiena, orecchie a punta, diadema d'argento con gemma, volto con occhi a mandorla, ciglia e labbra. Passo più lungo e braccia che oscillano meno. Quattro palette (verde, avorio, viola, ruggine).
 
 ## Gatto — `cat()`
 - Giunti: `corpo`, `testa`, `orecchioS/D`, `zampaAS/AD/PS/PD` con `gambaAS/AD/PS/PD`, coda in 6 anelli `coda0…coda5`.
