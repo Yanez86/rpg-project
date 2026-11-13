@@ -54,12 +54,20 @@ button.act[aria-pressed="true"]::before { background: var(--gold); }
 .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; }
 .row .who { font-family: var(--f-display); font-size: 22px; color: var(--gold); margin-right: 6px; min-width: 76px; }
 .zoom { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 190px); display: flex; flex-direction: column; gap: 8px; }
+/* HUD raccolto: tutto sta in un pannello che si apre dal bottone in basso a destra, così la scena resta libera */
+.hud-toggle { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 5; }
+.hud { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); width: min(400px, calc(100% - 32px)); max-height: calc(100% - 110px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; z-index: 4; }
+.hud[hidden] { display: none; }
+.hud .plate, .hud .filters, .hud .zoom, .hud .cast { position: static; max-width: none; }
+.hud .filters, .hud .zoom { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
+.hud .cast { align-items: stretch; }
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"}}</script>
 </head>
 <body>
 
 <canvas id="scene" aria-label="Un abitante del borgo, un'elfa e un gatto in un angolo di piazza sotto la pioggia, animati"></canvas>
+<div class="hud" id="hud" hidden>
 <div class="plate panel">
   <span class="eyebrow">rpg-project · personaggi a marionetta</span>
   <h1>Abitante, elfa e gatto</h1>
@@ -92,6 +100,9 @@ button.act[aria-pressed="true"]::before { background: var(--gold); }
     <button class="act" type="button" data-actor="gatto" data-clip="seduto" aria-pressed="false">Seduto</button>
     <button class="act" type="button" data-actor="gatto" data-clip="nuovo">Un altro</button></div>
 </div>
+</div>
+<button class="act hud-toggle" id="hudBtn" type="button" aria-expanded="false" aria-controls="hud">☰ Comandi</button>
+<script>{const h=document.getElementById('hud'),b=document.getElementById('hudBtn');const set=o=>{h.hidden=!o;const k=document.getElementById('stick');if(k)k.style.visibility=o?'hidden':'';b.setAttribute('aria-expanded',String(o));b.textContent=o?'✕ Chiudi':'☰ Comandi';};b.addEventListener('click',()=>set(h.hidden));addEventListener('keydown',e=>{if(e.key==='Escape')set(false);});}</script>
 <div class="err panel" id="err" hidden>Il tuo dispositivo non supporta WebGL, quindi la scena non può essere mostrata.</div>
 <script>addEventListener('hashchange',()=>location.reload());if(/notte/.test(location.hash+location.search)){const a=document.getElementById('mood');a.href='#giorno';a.textContent='Giorno';document.body.style.background='#12181b';}</script>
 <script type="module" src="./personaggi.js"></script>
