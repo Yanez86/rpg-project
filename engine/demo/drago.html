@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Il drago</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: vista in prima persona a tutto schermo con l'HUD di Runess: targa in alto a sinistra, riflessi in alto a destra, joystick in basso a sinistra, ritorno al mercato in basso a destra. Un solo tema scuro: è l'interfaccia del gioco. */
+:root {
+  --ground: #110e0b;
+  --panel: rgba(26, 21, 16, 0.88);
+  --panel-hi: #241d16;
+  --picked: #2e2418;
+  --bronze: #5c452b;
+  --bronze-lit: #d6a352;
+  --key-edge: #9a7550;
+  --text: #dccdb4;
+  --dim: #a3917a;
+  --gold: #ffd999;
+  --outline: #080503;
+  --f-display: "Jacquard 24", "Pixelify Sans", ui-monospace, monospace;
+  --f-ui: "Pixelify Sans", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; overflow: hidden; background: #6f7a72; color: var(--text); font-family: var(--f-ui); }
+#scene { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#scene:active { cursor: grabbing; }
+.panel { background: var(--panel); border: 3px solid var(--bronze); box-shadow: 0 0 0 2px var(--outline); }
+.plate { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(16px, env(safe-area-inset-left, 0px)); padding: 8px 14px 10px; pointer-events: none; max-width: min(380px, calc(100% - 48px)); display: grid; gap: 4px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--bronze-lit); }
+.plate h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 6vw, 42px); line-height: .95; margin: 0; color: var(--gold); text-wrap: balance; text-shadow: 2px 2px 0 var(--outline); }
+.keys { margin: 2px 0 0; font-size: 13px; color: var(--dim); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+kbd { font-family: var(--f-ui); font-size: 12px; color: var(--text); background: var(--panel-hi); border: 2px solid var(--key-edge); box-shadow: 0 0 0 1px var(--outline); padding: 0 5px; line-height: 17px; }
+.touch-only { display: none; }
+@media (pointer: coarse) { .mouse-only { display: none; } .touch-only { display: inline; } }
+.filters { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+button.act { font-family: var(--f-ui); font-size: 15px; padding: 5px 12px; cursor: pointer; color: var(--text); background: var(--panel); border: 2px solid var(--bronze); box-shadow: 0 0 0 2px var(--outline); }
+button.act:hover { border-color: var(--bronze-lit); color: var(--gold); }
+button.act:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+button.act[aria-pressed="true"] { border-color: var(--bronze-lit); color: var(--gold); background: var(--picked); }
+button.act[aria-pressed]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; vertical-align: 1px; background: var(--bronze); box-shadow: 0 0 0 1px var(--outline); }
+button.act[aria-pressed="true"]::before { background: var(--gold); }
+.home { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); }
+.stick { position: fixed; left: max(20px, calc(env(safe-area-inset-left, 0px) + 12px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); width: 112px; height: 112px; touch-action: none; background: rgba(26, 21, 16, 0.55); border: 3px solid var(--bronze); box-shadow: 0 0 0 2px var(--outline);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px); }
+.knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; background: var(--gold); border: 3px solid var(--bronze-lit); box-shadow: inset -4px -4px 0 #c99a4a; pointer-events: none; }
+.err { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 18px; font-size: 16px; color: var(--gold); max-width: calc(100% - 48px); text-align: center; }
+.night-link { font-family: var(--f-ui); font-size: 15px; color: var(--text); text-decoration: none; padding: 5px 12px; background: var(--panel); border: 2px solid var(--bronze); box-shadow: 0 0 0 2px var(--outline); }
+.night-link:hover { border-color: var(--bronze-lit); color: var(--gold); }
+.cast { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; }
+.row .who { font-family: var(--f-display); font-size: 22px; color: var(--gold); margin-right: 6px; min-width: 76px; }
+.zoom { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 130px); display: flex; flex-direction: column; gap: 8px; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"}}</script>
+</head>
+<body>
+
+<canvas id="scene" aria-label="Un drago alto cinque volte un uomo in un prato fuori dal borgo, sotto la pioggia, con un abitante accanto"></canvas>
+<div class="plate panel">
+  <span class="eyebrow">rpg-project · creature a marionetta</span>
+  <h1>Il drago</h1>
+  <p class="keys">Trascina per girare attorno · rotellina o +/− per avvicinarti</p>
+</div>
+<div class="filters">
+  <button class="act" id="scan" type="button" aria-pressed="true">Linee</button>
+  <button class="act" id="refl" type="button" aria-pressed="true">Riflessi</button>
+  <a class="night-link" id="mood" href="#notte">Notte</a>
+</div>
+<div class="zoom"><button class="act" id="zin" type="button" aria-label="Avvicina">+</button><button class="act" id="zout" type="button" aria-label="Allontana">−</button></div>
+<div class="cast">
+  <div class="row panel"><span class="who">Drago</span>
+    <button class="act" type="button" data-actor="drago" data-clip="fermo" aria-pressed="true">Fermo</button>
+    <button class="act" type="button" data-actor="drago" data-clip="cammina" aria-pressed="false">Cammina</button>
+    <button class="act" type="button" data-actor="drago" data-clip="ruggisce" aria-pressed="false">Ruggisce</button>
+    <button class="act" type="button" data-actor="drago" data-clip="vola" aria-pressed="false">Vola</button>
+    <button class="act" type="button" data-actor="drago" data-clip="nuovo">Un altro</button>
+    <button class="act" type="button" data-actor="abitante" data-clip="saluta">L'abitante saluta</button></div>
+</div>
+<div class="err panel" id="err" hidden>Il tuo dispositivo non supporta WebGL, quindi la scena non può essere mostrata.</div>
+<script>addEventListener('hashchange',()=>location.reload());if(/notte/.test(location.hash+location.search)){const a=document.getElementById('mood');a.href='#giorno';a.textContent='Giorno';document.body.style.background='#12181b';}</script>
+<script type="module" src="./drago.js"></script>
+</body>
+</html>

@@ -100,3 +100,14 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 - Giunti: `corpo`, `testa`, `orecchioS/D`, `zampaAS/AD/PS/PD` con `gambaAS/AD/PS/PD`, coda in 6 anelli `coda0…coda5`.
 - Pelo tigrato in pixel-art (rosso, grigio, nero con petto bianco, crema), ventre e muso chiari, occhi con pupilla a fessura, "M" sulla fronte, baffi, orecchie con l'interno rosa.
 - Clip: `fermo` (coda che ondeggia a S, orecchio che scatta), `cammina` (passo laterale: posteriore e anteriore dello stesso lato in sequenza), `trotta` (diagonali insieme), `seduto`.
+
+## Drago — `dragon()`
+- Scala: testa a circa 8,7 m (cinque volte l'abitante), corpo lungo circa 7 m, apertura alare circa 17 m.
+- Giunti: `corpo`, `collo0…collo5`, `testa`, `mascella`, `coda0…coda9`, `zampaAS/AD/PS/PD`, `gambaAS/AD/PS/PD`, `piedeAS/AD/PS/PD`, `alaS/D`, `avambraccioS/D`, `manoS/D`, `ditoS1…4` e `ditoD1…4`.
+- Corpo in tre blocchi; scaglie embricate in pixel-art sopra, placche del ventre sotto (faccia −y).
+- Cresta dorsale di spine dalla testa alla punta della coda; coda che si assottiglia e finisce a losanga.
+- Testa con muso, arcate sopraccigliari, occhi ambra luminosi, narici, denti sopra e sotto, lingua, corna ricurve in tre segmenti, spine sulle guance.
+- Zampe in tre segmenti (quelle posteriori digitigrade) con tre artigli.
+- Ali: omero, avambraccio, mano con artiglio, quattro dita. La **membrana** è una mesh ricalcolata a ogni frame dalle posizioni delle ossa (`update()`), con il bordo d'uscita a festone. In Godot va rifatta come mesh con scheletro (skinning).
+- Varianti: cremisi, verde bronzo, ardesia, nero.
+- Clip: `fermo` (respiro lento, collo e coda che ondeggiano, ali chiuse), `cammina` (2,4 s, passo laterale), `ruggisce` (si impenna, apre la mascella e le ali), `vola` (battito d'ali, zampe raccolte, si alza di circa 4 m).
