@@ -113,7 +113,16 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 - **Volto 128×64** (il doppio): stessa disposizione del volto standard, occhi a mandorla con iride, pupilla e riflesso (un pixel più vicini fra loro), ciglia con la coda, sopracciglia arcuate, rossore leggero. Resta pixel-art (`NearestFilter`).
 - **Gonna in due metà sui giunti `cosciaS`/`cosciaD`**: camminando seguono la gamba e davanti si apre uno spacco, invece di farsi bucare dal ginocchio. L'attacco è coperto dalla baschina, che resta sull'anca.
 - **Dettagli senza contorno**: lacci, occhielli, profili, gemme, fibbie, orli sono in oggetti `<giunto>_dettagli` con la proprietà `noOutline` (in Blender una proprietà dell'oggetto, nel glTF `extras`, nel motore `userData.noOutline`): `setToon` non gli mette il contorno.
-- Peso: circa 60 000 triangoli (l'elfa del motore circa 16 000), file di 1,5 MB.
+- Peso vestita: circa 60 000 triangoli disegnati (l'elfa del motore circa 16 000); il file, con corpo e intimo, ne contiene circa 75 000 (1,8 MB).
+
+## Corpo base e capi (guardaroba) — `vesti()`, `engine/demo/guardaroba.html`
+- L'elfa di Blender è scomposta in **strati**: `corpo` → `intimo` → `abiti` → `accessori` / `capelli`. Ogni oggetto ha in `userData` (proprietà dell'oggetto in Blender, `extras` nel glTF): `strato`, `pezzo` (il capo), `regione` (la parte del corpo che occupa), `nasconde` (regioni che il capo copre del tutto), `richiede` (il capo su cui si appoggia).
+- **Corpo base**: liscio come un manichino, senza dettagli anatomici; regioni `testa`, `orecchie`, `collo`, `busto`, `bacino`, `braccio`, `avambraccio`, `mano`, `coscia`, `gamba`, `piede`. Ha le stesse sezioni dei vestiti qualche millimetro più dentro (busto 4 mm, cosce e gambe 3 mm); le spalle nude arrivano alle braccia; la cima delle cosce è a cupola e disegna la linea dei fianchi; piedi con tallone, collo del piede e dita accennate (semplici come le mani). Calvo: i capelli sono un capo.
+- **Intimo** (primo strato, lino chiaro): `fascia` sul petto, `culotte`, `calze` (scure, fino alla caviglia).
+- **Abiti**: `abito` (corpetto con il profilo a V, colletto, maniche e maniche a campana, baschina, gonna in due metà), `corsetto`, `cintura`, `bracciali`, `stivali`, `spallacci`, `mantello`. **Accessori**: `diadema` (richiede i capelli), `orecchini`, `borsello` (richiede la cintura), `spilla` e `bracciali_alti` (richiedono l'abito). **Capelli**: `capelli`.
+- **Regola di visibilità** (`scegliVisibili`): un capo si vede se è indossato e c'è ciò che richiede; il corpo si vede sempre; un oggetto con una `regione` si nasconde se un capo di uno strato più alto la `nasconde` (l'abito nasconde busto, braccio e bacino del corpo e l'intimo sotto; gli stivali nascondono gamba e piede, anche le calze). Così la pelle non buca mai la stoffa.
+- Uso: `elfa3d({ vesti: ['fascia', 'culotte', 'stivali'] })`, poi `vesti(attore, [...])` per cambiare; `pezziElfa3d()` elenca i capi del modello per strato, `tuttiIPezzi()` è l'elfa completa (quella di prima).
+- Il corpo nudo è a pezzi rigidi come tutto il resto: nelle animazioni si vedono le giunture (spalle, anche, ginocchia) come in una bambola articolata. Un corpo continuo richiede lo skinning (pelle che si deforma), che oggi non è un pilastro del progetto.
 
 ## Gatto — `cat()`
 - Giunti: `corpo`, `testa`, `orecchioS/D`, `zampaAS/AD/PS/PD` con `gambaAS/AD/PS/PD`, coda in 6 anelli `coda0…coda5`.

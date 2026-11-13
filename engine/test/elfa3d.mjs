@@ -3,14 +3,16 @@
 //  1. ci sono tutti i giunti, con lo stesso genitore, nella stessa posizione e senza rotazioni né scale (le clip funzionano uguali);
 //  2. in posa di riposo i piedi toccano y = 0 e l'altezza è quella dell'elfa del motore (1,84 m in cima ai capelli);
 //  3. ogni materiale del file ha il suo materiale nel motore;
-//  4. elfa3d() si costruisce, prende il cel shading e suona le clip (con il finto three).
+//  4. guardaroba: ogni oggetto ha strato e pezzo, il corpo ha tutte le regioni, i capi coprono regioni che esistono,
+//     e vestendo o spogliando si vede la cosa giusta (scegliVisibili);
+//  5. elfa3d() si costruisce, prende il cel shading e suona le clip (con il finto three).
 import fs from 'fs';
 const canvas2d = () => new Proxy({}, { get: (t, k) => k === 'createImageData' ? ((w, h) => ({ data: new Uint8ClampedArray(w * h * 4) })) : (() => ({})) });
 globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: canvas2d }) };
 process.on('uncaughtException', e => { console.error('ERRORE:', e); process.exit(1); });
 const fail = m => { console.error('ERRORE: ' + m); process.exit(1); };
 const { ELF_SIZE } = await import('../src/characters/villager.js');
-const { setElfa3d, elfa3d, ELFA3D_MATERIALS } = await import('../src/characters/elfa3d.js');
+const { setElfa3d, elfa3d, ELFA3D_MATERIALS, scegliVisibili, vesti } = await import('../src/characters/elfa3d.js');
 const { setToon } = await import('../src/characters/toon.js');
 
 const file = fs.readFileSync(new URL('../assets/elfa.glb', import.meta.url));
@@ -43,9 +45,30 @@ if (Math.abs(hi - 1.842) > 0.03) fail('altezza fuori misura: ' + hi.toFixed(3) +
 // 3. materiali
 for (const m of json.materials) if (!ELFA3D_MATERIALS.includes(m.name)) fail('materiale senza corrispondenza nel motore: ' + m.name);
 
-// 4. modulo
+// 4. guardaroba
+const tags = json.nodes.filter(n => n.mesh !== undefined).map(n => ({ name: n.name, ...(n.extras || {}) }));
+for (const t of tags) if (!t.strato || !t.pezzo) fail(t.name + ': manca lo strato o il pezzo');
+const regioni = new Set(tags.filter(t => t.strato === 'corpo').map(t => t.regione));
+for (const r of ['testa', 'orecchie', 'collo', 'busto', 'bacino', 'braccio', 'avambraccio', 'mano', 'coscia', 'gamba', 'piede']) if (!regioni.has(r)) fail('al corpo manca la regione ' + r);
+const pezzi = [...new Set(tags.filter(t => t.strato !== 'corpo').map(t => t.pezzo))];
+for (const p of ['fascia', 'culotte', 'calze', 'abito', 'corsetto', 'cintura', 'bracciali', 'stivali', 'spallacci', 'mantello', 'orecchini', 'diadema', 'borsello', 'spilla', 'bracciali_alti', 'capelli'])
+  if (!pezzi.includes(p)) fail('manca il capo ' + p);
+for (const t of tags) {
+  for (const r of (t.nasconde || '').split(',').filter(Boolean)) if (!regioni.has(r)) fail(`${t.name}: nasconde la regione ${r}, che non esiste`);
+  if (t.richiede && !pezzi.includes(t.richiede)) fail(`${t.name}: richiede ${t.richiede}, che non esiste`);
+}
+const vede = (lista, f) => { const v = scegliVisibili(tags, lista); return tags.filter((t, i) => v[i] && f(t)).length; };
+const corpoNudo = vede([], t => t.strato === 'corpo'), corpoTot = tags.filter(t => t.strato === 'corpo').length;
+if (corpoNudo !== corpoTot || vede([], t => t.strato !== 'corpo')) fail('senza capi deve vedersi tutto il corpo e nient\'altro');
+if (vede(pezzi, t => t.strato === 'corpo' && ['busto', 'bacino', 'braccio', 'coscia', 'gamba', 'piede'].includes(t.regione))) fail('vestita, il corpo coperto deve essere nascosto');
+if (vede(pezzi, t => t.pezzo === 'fascia' || t.pezzo === 'culotte')) fail("vestita, l'intimo sotto l'abito deve essere nascosto");
+if (vede(pezzi, t => t.pezzo === 'calze' && t.regione === 'gamba')) fail('le calze sotto gli stivali devono essere nascoste');
+if (!vede(['fascia', 'culotte'], t => t.pezzo === 'fascia') || vede(['fascia', 'culotte'], t => t.strato === 'corpo') !== corpoTot) fail("in intimo si vedono fascia, culotte e tutto il corpo");
+if (vede(['borsello'], t => t.pezzo === 'borsello')) fail('il borsello senza cintura non deve vedersi');
+
+// 5. modulo
 setElfa3d(ab);
-const e = elfa3d(); setToon(e.root, true);
+const e = elfa3d(); setToon(e.root, true); vesti(e, ['fascia', 'culotte']); vesti(e, []); elfa3d({ vesti: ['abito'] });
 for (const c of ['fermo', 'cammina', 'corre', 'saluta']) { e.anim.play(c); e.anim.update(0.1); }
 const tri = json.meshes.reduce((a, m) => a + m.primitives.reduce((b, p) => b + json.accessors[p.indices].count / 3, 0), 0);
-console.log(`ok · elfa3d · ${Object.keys(J).length} giunti al loro posto · piedi a ${lo.toFixed(3)} m · altezza ${hi.toFixed(2)} m · ${json.materials.length} materiali · ${tri} triangoli`);
+console.log(`ok · elfa3d · ${Object.keys(J).length} giunti al loro posto · piedi a ${lo.toFixed(3)} m · altezza ${hi.toFixed(2)} m · ${json.materials.length} materiali · ${regioni.size} regioni del corpo · ${pezzi.length} capi · ${tri} triangoli nel file`);

@@ -60,15 +60,58 @@ function faceTexHD(f) {
 }
 
 /** nomi dei materiali che il modello può usare (quelli di engine/tools/blender/elfa.py) */
-export const ELFA3D_MATERIALS = ['abito', 'gonna', 'mantello', 'calze', 'cuoio', 'cintura', 'metallo', 'bordo', 'pelle', 'pelle_ombra', 'capelli', 'volto', 'gemma'];
+export const ELFA3D_MATERIALS = ['abito', 'gonna', 'mantello', 'calze', 'cuoio', 'cintura', 'metallo', 'bordo', 'pelle', 'pelle_ombra', 'capelli', 'volto', 'gemma', 'lino'];
 
-/** un'elfa con aspetto casuale (palette, carnagione, capelli, occhi). Restituisce { root, anim } come elf() */
-export function elfa3d() {
+/*
+ * Guardaroba. Ogni oggetto del modello ha in userData (dalle proprietà di Blender):
+ *   strato: corpo | intimo | abiti | accessori | capelli;  pezzo: il capo ("corpo" per il corpo);
+ *   regione: la parte del corpo che occupa (busto, braccio, bacino, coscia, gamba, piede…), sul corpo e sull'intimo;
+ *   nasconde: regioni che il capo copre del tutto (separate da virgole): negli strati più bassi si nascondono;
+ *   richiede: il capo su cui il pezzo si appoggia (senza quello non si vede).
+ */
+const LIVELLO = { corpo: 0, intimo: 1, abiti: 2, accessori: 3, capelli: 3 };
+/**
+ * Quali oggetti si vedono con certi capi addosso. tags: array di userData; pezzi: i capi indossati.
+ * Il corpo si vede sempre, tranne le regioni coperte da un capo di uno strato più alto. Funzione pura (si prova senza three).
+ */
+export function scegliVisibili(tags, pezzi) {
+  const su = new Set(pezzi), ok = t => su.has(t.pezzo) && (!t.richiede || su.has(t.richiede)), coperte = [];
+  for (const t of tags) if (t.nasconde && t.strato !== 'corpo' && ok(t)) for (const r of t.nasconde.split(',')) coperte.push([r, LIVELLO[t.strato]]);
+  return tags.map(t => {
+    if (!t.strato) return true;
+    if (t.strato !== 'corpo' && !ok(t)) return false;
+    return !(t.regione && coperte.some(([r, l]) => r === t.regione && l > LIVELLO[t.strato]));
+  });
+}
+/** i capi del modello, per strato: { intimo: [...], abiti: [...], accessori: [...], capelli: [...] } */
+export function pezziElfa3d() {
+  if (!TPL) return {};
+  const out = {};
+  TPL.traverse(o => { const u = o.userData; if (u.strato && u.strato !== 'corpo') { const l = out[u.strato] = out[u.strato] || []; if (!l.includes(u.pezzo)) l.push(u.pezzo); } });
+  return out;
+}
+/** tutti i capi: l'elfa vestita come prima della scomposizione */
+export const tuttiIPezzi = () => Object.values(pezziElfa3d()).flat();
+/** veste un'elfa (o la spoglia): pezzi = elenco dei capi indossati. Restituisce l'attore, con attore.pezzi aggiornato */
+export function vesti(actor, pezzi) {
+  const list = [];
+  actor.root.traverse(o => { if (o.isMesh && o.userData.strato) list.push(o); });
+  const vis = scegliVisibili(list.map(o => o.userData), pezzi);
+  list.forEach((o, i) => { o.visible = vis[i]; });
+  actor.pezzi = [...pezzi]; return actor;
+}
+
+/**
+ * Un'elfa con aspetto casuale (palette, carnagione, capelli, occhi). Restituisce { root, anim, pezzi } come elf().
+ * opts.vesti: i capi indossati (di base tutti; [] = solo il corpo, ['fascia', 'culotte'] = in intimo).
+ */
+export function elfa3d(opts) {
   if (!TPL) throw new Error('elfa3d(): prima carica il modello con await loadElfa3d()');
   const look = elfLook(), M = humanMats(look, faceTexHD(look));
   const mats = { abito: M.top, gonna: M.skirt, mantello: M.cloak, calze: M.trous, cuoio: M.leather, cintura: M.belt, metallo: M.metal,
-    bordo: M.trim, pelle: M.skin, pelle_ombra: M.skinShade, capelli: M.hair, volto: M.face, gemma: M.gem };
+    bordo: M.trim, pelle: M.skin, pelle_ombra: M.skinShade, capelli: M.hair, volto: M.face, gemma: M.gem, lino: M.linen };
   const root = TPL.clone(true);
   root.traverse(o => { if (o.isMesh) { o.material = mats[o.userData.mat] || M.top; o.castShadow = true; o.receiveShadow = true; } });
-  return { root, anim: animator(root, villagerClips({ hip: ELF_SIZE.hip, stride: 1.08, arm: 0.75 })) };
+  const actor = { root, anim: animator(root, villagerClips({ hip: ELF_SIZE.hip, stride: 1.08, arm: 0.75 })) };
+  return vesti(actor, (opts && opts.vesti) || tuttiIPezzi());
 }

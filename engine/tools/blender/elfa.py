@@ -49,7 +49,7 @@ COLL = bpy.context.scene.collection
 PREVIEW = {
     'abito': 0x3e5a46, 'gonna': 0x3e5a46, 'mantello': 0x2e4436, 'calze': 0x3a3430, 'cuoio': 0x5a4632, 'cintura': 0x2e2218,
     'metallo': 0xc8c8c0, 'bordo': 0xc8a050, 'pelle': 0xecd6c4, 'pelle_ombra': 0xc2afa0, 'capelli': 0xe8dcb0, 'volto': 0xecd6c4,
-    'gemma': 0x6ac8b0,
+    'gemma': 0x6ac8b0, 'lino': 0xd6cab0,
 }
 MATS = {}
 def mat(name):
@@ -247,7 +247,7 @@ def probe(bvh, origin, direction, off=0.0):
     return hit[0] - d * off
 
 # ---------------------------------------------------------------- oggetti di Blender
-def build(name, joint_name, g, mods=(), sharp=None, extras=None):
+def build(name, joint_name, g, mods=(), sharp=None, extras=None, tags=None):
     me = bpy.data.meshes.new(name); me.from_pydata([tb(p) for p in g.v], [], g.f)
     uvl = me.uv_layers.new(name='UVMap')
     for p in me.polygons:
@@ -263,16 +263,36 @@ def build(name, joint_name, g, mods=(), sharp=None, extras=None):
     if sharp: me.set_sharp_from_angle(angle=sharp)
     me.validate(clean_customdata=False); me.update()
     ob = bpy.data.objects.new(name, me); COLL.objects.link(ob); ob.parent = J[joint_name]
-    for k, v in (extras or {}).items(): ob[k] = v                 # proprietà → "extras" del glTF → userData nel motore
+    for k, v in {**(CUR if tags is None else tags), **(extras or {})}.items(): ob[k] = v   # proprietà → "extras" del glTF → userData nel motore
     for kind, opts in mods:
         md = ob.modifiers.new(kind.lower(), kind)
         for k, v in opts.items(): setattr(md, k, v)
     return ob
 
-# dettagli piccoli (lacci, occhielli, profili, gemme, fibbie): un oggetto per giunto, SENZA contorno del cel shading
-# (userData.noOutline): con il contorno a spessore costante sullo schermo, da lontano diventerebbero macchie scure.
+# ---------------------------------------------------------------- strati
+# Ogni oggetto porta nel glTF (extras → userData nel motore) le etichette del guardaroba:
+#   strato: corpo | intimo | abiti | accessori | capelli
+#   pezzo:  il capo (abito, corsetto, stivali, diadema…); per il corpo è "corpo"
+#   regione: la parte del corpo che l'oggetto occupa (busto, braccio, coscia, gamba, piede…), sul corpo e sull'intimo
+#   nasconde: le regioni che il capo copre del tutto: negli strati più bassi si nascondono (niente pelle che buca la stoffa)
+#   richiede: il capo su cui si appoggia (il borsello pende dalla cintura, la spilla sta sul colletto dell'abito)
+# Il corpo è liscio come un manichino (nessun dettaglio anatomico): l'intimo è il primo strato.
+CUR = {}
+def pezzo(strato, nome, nasconde=(), richiede=None):
+    CUR.clear(); CUR.update(strato=strato, pezzo=nome)
+    if nasconde: CUR['nasconde'] = ','.join(nasconde)
+    if richiede: CUR['richiede'] = richiede
+def corpo(): pezzo('corpo', 'corpo')
+ABITO = dict(nasconde=('busto', 'braccio', 'bacino'))
+def shrink(secs, d): return [dict(s, w=s['w'] - d, h=s['h'] - d) for s in secs]
+
+# dettagli piccoli (lacci, occhielli, profili, gemme, fibbie): un oggetto per giunto e per capo, SENZA contorno del cel
+# shading (userData.noOutline): con il contorno a spessore costante sullo schermo, da lontano diventerebbero macchie scure.
 DET = {}
-def D(j): return DET.setdefault(j, Part())
+def D(j):
+    k = (j, CUR['pezzo'])
+    if k not in DET: DET[k] = (Part(), dict(CUR))
+    return DET[k][0]
 
 # ================================================================= TESTA
 def shape_head(x, y, z, elf=True, inflate=0.0):
@@ -344,14 +364,16 @@ def hair_point(x, y, z):
 HS = (0.093 * hs, 0.13 * hs, 0.118 * hs); HY = 0.125 * hs                              # un po' più stretta e alta dell'elfa del motore
 def head_xf(p): return (p[0] * HS[0], p[1] * HS[1] + HY, p[2] * HS[2] + 0.005)
 
+corpo()
 head = sphere_grid(48, 36, PI, lambda x, y, z: head_xf(shape_head(x, y, z)), 'volto')
+build('testa_volto', 'testa', head, extras={'regione': 'testa'})
+pezzo('capelli', 'capelli')
 hair = sphere_grid(72, 60, PI * 0.98, lambda x, y, z: head_xf(hair_point(x, y, z)), 'capelli')
-build('testa_volto', 'testa', head)
 build('testa_capelli', 'testa', hair)
-
 headParts = Part().add(head).add(hair); HB = headParts.bvh()
-deco, ears = D('testa'), Part()
-# orecchie a lama: profilo a foglia, incavo sul davanti più scuro, punta che piega un poco all'indietro
+
+corpo()                                             # orecchie a lama: profilo a foglia, incavo sul davanti più scuro, punta che piega un poco all'indietro
+ears = Part()
 for s in (1, -1):
     def ear_w(f): return 0.024 * (1 - f) ** 0.85 * (0.75 + 0.25 * sin(PI * min(1.0, f * 2))) + 0.0005
     secs = [dict(t=f * 0.168, w=ear_w(f), h=0.009 - 0.006 * f) for f in [0, 0.06, 0.15, 0.27, 0.4, 0.53, 0.66, 0.78, 0.88, 0.95, 1.0]]
@@ -364,12 +386,16 @@ for s in (1, -1):
              matf=lambda a, t: 'pelle_ombra' if (abs(((a + 0.5) % 1) - 0.5) < 0.17 and 0.08 < t / 0.168 < 0.86) else 'pelle')
     e.v = [(x, -y, z) for x, y, z in e.v]; e.f = [f[::-1] for f in e.f]; e.uv = [u[::-1] for u in e.uv]   # la lama sale verso +y
     e.xform(tr(s * 0.092 * hs, 0.115 * hs, -0.005) @ rot(-0.55, s * 0.35, -s * 1.15)); ears.add(e)
-    # orecchino: anello e goccia
+build('testa_orecchie', 'testa', ears, extras={'regione': 'orecchie'})
+
+pezzo('accessori', 'orecchini')                     # orecchini: anello e goccia
+for s in (1, -1):
     c = Vector((s * 0.097 * hs, 0.083 * hs, 0.0))
-    deco.add(tube([tuple(c + Vector((0.0075 * sin(a / 16 * TAU) * 0.35, -0.0075 * cos(a / 16 * TAU), 0.0075 * sin(a / 16 * TAU)))) for a in range(16)], 0.0016, 6, True, 'metallo'))
-    deco.add(gem(tuple(c + Vector((0, -0.017, 0))), (0.0035, 0.006, 0.0035)))
+    D('testa').add(tube([tuple(c + Vector((0.0075 * sin(a / 16 * TAU) * 0.35, -0.0075 * cos(a / 16 * TAU), 0.0075 * sin(a / 16 * TAU)))) for a in range(16)], 0.0016, 6, True, 'metallo'))
+    D('testa').add(gem(tuple(c + Vector((0, -0.017, 0))), (0.0035, 0.006, 0.0035)))
 
 # diadema: nastro d'argento appoggiato su capelli e fronte, scende a punta sulla fronte con la gemma; foglie ai lati
+pezzo('accessori', 'diadema', richiede='capelli')
 ang = PI / 2 + 0.17; RM = tr(0, 0.205 * hs, -0.004) @ rot(ang); C0 = RM @ Vector((0, 0, 0)); UPd = (rot(ang) @ Vector((0, 0, -1, 0))).to_3d().normalized()
 band, ups, front = [], [], None
 for k in range(72):
@@ -380,22 +406,21 @@ for k in range(72):
     q = probe(HB, p + d * 0.08, -d, 0.0024) or p
     band.append(tuple(q)); ups.append(tuple(UPd))
     if k == 18: front = (q, d)
-deco.add(tube(band, 0.0017, 8, True, 'metallo', up=ups, rx=2.6))
+D('testa').add(tube(band, 0.0017, 8, True, 'metallo', up=ups, rx=2.6))
 fq, fd = front
-deco.add(tube([tuple(fq + fd * 0.004 + Vector((0.0085 * cos(a / 14 * TAU), 0.0115 * sin(a / 14 * TAU), 0))) for a in range(14)], 0.0018, 5, True, 'metallo'))
-deco.add(gem(tuple(fq + fd * 0.0055), (0.0075, 0.0105, 0.0055)))
-for s in (1, -1):                                 # foglioline e gemme piccole ai lati
+D('testa').add(tube([tuple(fq + fd * 0.004 + Vector((0.0085 * cos(a / 14 * TAU), 0.0115 * sin(a / 14 * TAU), 0))) for a in range(14)], 0.0018, 5, True, 'metallo'))
+D('testa').add(gem(tuple(fq + fd * 0.0055), (0.0075, 0.0105, 0.0055)))
+for s in (1, -1):                                   # foglioline e gemme piccole ai lati
     k = 18 - s * 7; q = Vector(band[k]); dd = Vector((q.x - C0.x, 0, q.z - C0.z)).normalized()
-    deco.add(gem(tuple(q + dd * 0.003), (0.003, 0.0042, 0.0025)))
+    D('testa').add(gem(tuple(q + dd * 0.003), (0.003, 0.0042, 0.0025)))
     for j, (dy, ax) in enumerate(((0.012, 0.35), (0.008, 0.9))):
         base = Vector(band[18 - s * (3 + j * 2)]); lf = []
         for a in range(10):
             f = a / 9; lf.append(tuple(base + Vector((s * f * 0.006 * ax, f * dy + 0.002, 0)) + dd * 0.001))
-        deco.add(tube(lf, lambda f: 0.0028 * sin(PI * min(1, f * 1.1)) + 0.0004, 5, False, 'metallo', rx=0.45))
-build('testa_orecchie', 'testa', ears)
+        D('testa').add(tube(lf, lambda f: 0.0028 * sin(PI * min(1, f * 1.1)) + 0.0004, 5, False, 'metallo', rx=0.45))
 
-# collo
-build('collo_pelle', 'collo', loft(taper(0.0, -S['neck'] - 0.03, 0.045, 0.048, 0.043, 0.046, 0, 3), N=28, mat='pelle'))
+corpo()
+build('collo_pelle', 'collo', loft(taper(0.0, -S['neck'] - 0.03, 0.045, 0.048, 0.043, 0.046, 0, 3), N=28, mat='pelle'), extras={'regione': 'collo'})
 
 # ================================================================= BUSTO
 ch = S['chest'] * W
@@ -409,8 +434,18 @@ torso_secs = [
     dict(t=-S['torso'] * 0.86, w=ch + 0.024 * W, h=0.112 * W, oy=-0.004), dict(t=-S['torso'] * 0.95, w=ch + 0.022 * W, h=0.1 * W, oy=-0.008),
     dict(t=-S['torso'] * 0.995, w=ch * 0.74, h=0.085 * W, oy=-0.01), dict(t=-S['torso'] - 0.012, w=0.085 * W, h=0.07 * W, oy=-0.008),
     dict(t=-S['torso'] - 0.02, w=0.055, h=0.05)]
+corpo()                                             # il busto nudo ha le sezioni dell'abito 4 mm più dentro, ma le spalle arrivano alle braccia
+body_secs = shrink(torso_secs, 0.004)
+for b_ in body_secs:
+    if abs(b_['t'] + S['torso'] * 0.86) < 1e-6: b_['w'] += 0.014
+    if abs(b_['t'] + S['torso'] * 0.95) < 1e-6: b_['w'] += 0.024; b_['h'] += 0.004
+build('busto_corpo', 'busto', loft(body_secs, N=40, step=0.024, mat='pelle'), extras={'regione': 'busto'})
+pezzo('intimo', 'fascia')                           # fascia di lino sul petto
+build('busto_fascia', 'busto', loft(shrink([s for s in torso_secs if -0.4 <= s['t'] <= -0.23], 0.0015), N=40, step=0.02, caps=(False, False), mat='lino'), extras={'regione': 'busto'})
+
+pezzo('abiti', 'abito', **ABITO)
 torso = loft(torso_secs, N=40, step=0.024, mat='abito')
-build('busto_corpo', 'busto', torso)
+build('busto_abito', 'busto', torso)
 TB = torso.bvh()
 for s in (1, -1):                                   # corpetto: doppio profilo ricamato a V dalle spalle alla punta del corsetto
     for inset in (0.0, 0.009):
@@ -421,6 +456,7 @@ for s in (1, -1):                                   # corpetto: doppio profilo r
         D('busto').add(tube(line, 0.0015, 4, False, 'bordo'))
 
 # corsetto di cuoio: stecche in rilievo, canale per i lacci sul davanti, profili dorati in alto e in basso
+pezzo('abiti', 'corsetto')
 bon = [(0.0, -0.05, 0.012)] + [(sd * a0, 0.035, 0.007) for sd in (1, -1) for a0 in (0.1, 0.19, 0.3)] + [(0.5, 0.03, 0.007)]
 cor_secs = [dict(t=0.0, w=S['waist'] * W + 0.008, h=0.106 * W + 0.006, bumps=bon), dict(t=-0.1, w=S['waist'] * W * 0.98 + 0.008, h=0.1 * W + 0.006, oy=-0.004, bumps=bon),
             dict(t=-0.2, w=(S['waist'] + S['chest']) / 2 * W + 0.008, h=0.112 * W + 0.006, bumps=bon),
@@ -434,14 +470,12 @@ def ring_on(bv, y, n=64, off=0.0015, cz=0.0):
         q = probe(bv, Vector((0, y, cz)) + d * 0.4, -d, off); pts.append(tuple(q))
     return pts
 D('busto').add(tube(ring_on(CB, 0.243, 48), 0.0026, 4, True, 'bordo'))
-# lacci: occhielli e laccio incrociato nel canale davanti, con un fiocco in alto
-eyel = []
+eyel = []                                           # lacci: occhielli e laccio incrociato nel canale davanti, con un fiocco in alto
 for k in range(5):
     y = 0.078 + k * 0.038
     for sd in (-1, 1):
         q = probe(CB, (sd * 0.016, y, 0.4), (0, 0, -1), 0.0008); eyel.append(q)
         D('busto').add(tube([tuple(q + Vector((0.0032 * cos(a / 10 * TAU), 0.0032 * sin(a / 10 * TAU), 0.0006))) for a in range(10)], 0.0011, 4, True, 'metallo'))
-lace = []
 for k in range(4):
     L0, R0, L1, R1 = eyel[2 * k], eyel[2 * k + 1], eyel[2 * k + 2], eyel[2 * k + 3]
     for a, b in ((L0, R1), (R0, L1)):
@@ -453,10 +487,10 @@ for sd in (-1, 1):
     D('busto').add(tube([tuple(top), tuple(top + Vector((sd * 0.006, -0.018, 0.003))), tuple(top + Vector((sd * 0.009, -0.034, 0.002)))], 0.0014, 5, False, 'bordo'))
 build('busto_corsetto', 'busto', bust)
 
-# cintura con fibbia a cornice, passante e borsello a cuscino con la patta e il bottone
+# cintura con fibbia a cornice e puntale
+pezzo('abiti', 'cintura')
 belt = loft(taper(-0.005, -0.06, S['waist'] * W + 0.014, 0.106 * W + 0.014, S['waist'] * W + 0.014, 0.104 * W + 0.014, 0, 2), N=64, mat='cintura')
 BB = belt.bvh(); bz = probe(BB, (0, 0.0325, 0.4), (0, 0, -1)).z
-bk = Part().add(belt)
 fr = []
 for k in range(24):
     a = k / 24 * TAU; cx, cy = cos(a), sin(a); px = math.copysign(abs(cx) ** 0.35, cx) * 0.021; py = math.copysign(abs(cy) ** 0.35, cy) * 0.02
@@ -464,12 +498,23 @@ for k in range(24):
 D('busto').add(tube(fr, 0.0034, 6, True, 'metallo'))
 D('busto').add(tube([(-0.019, 0.0325, bz + 0.005), (0.004, 0.0325, bz + 0.0065)], 0.0018, 5, False, 'metallo'))
 D('busto').add(loft(taper(0, 0.03, 0.006, 0.0025, 0.006, 0.0025, 0, 2), N=8, axis='z', R=0.35, mat='cintura').xform(tr(0.015, 0.0325, bz + 0.001) @ rot(0, PI / 2, 0)))
-build('busto_cintura', 'busto', bk)
+build('busto_cintura', 'busto', belt)
 
-# ================================================================= ANCA: baschina, gonna in due metà che seguono le gambe
+# ================================================================= ANCA: bacino nudo, culotte, baschina, gonna in due metà
+hipW = S['hips'] * W
+glutei = lambda k: [(0.5 - 0.09, 0.07 * k, 0.07), (0.5 + 0.09, 0.07 * k, 0.07)]
+pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003), dict(t=-0.01, w=(S['waist'] + S['hips']) / 2 * W - 0.012, h=0.115 * W - 0.008),
+               dict(t=0.04, w=hipW - 0.02, h=0.13 * W - 0.014, oy=-0.006, bumps=glutei(1)), dict(t=0.085, w=hipW - 0.026, h=0.11 * W, oy=-0.01, bumps=glutei(1.1)),
+               dict(t=0.12, w=0.1, h=0.068, oy=-0.008, bumps=glutei(0.5)), dict(t=0.145, w=0.045, h=0.035, oy=-0.004)]   # le cosce disegnano la linea dei fianchi
+corpo()                                             # bacino liscio come un manichino; le cosce vi entrano dai giunti delle anche
+build('anca_corpo', 'anca', loft(pelvis_secs, N=40, step=0.02, mat='pelle'), extras={'regione': 'bacino'})
+pezzo('intimo', 'culotte')
+cul = [dict(t=-0.035, w=0.106 + 0.002, h=0.0858 + 0.002)] + [dict(s, w=s['w'] + 0.002, h=s['h'] + 0.002) for s in pelvis_secs[1:]]
+build('anca_culotte', 'anca', loft(cul, N=40, step=0.02, caps=(False, True), mat='lino'), extras={'regione': 'bacino'})
+
 # La gonna sotto i fianchi è divisa in due metà appese ai giunti cosciaS/D: camminando seguono la gamba invece di farsi
 # bucare dal ginocchio (con un pezzo rigido sull'anca succedeva). L'attacco è coperto dalla baschina, che resta sull'anca.
-hipW = S['hips'] * W
+pezzo('abiti', 'abito', **ABITO)
 def fold(a): return sin(TAU * 9 * a + 0.7 * sin(TAU * 3 * a))
 FOLD = 0.095
 def skirt_def(p, a, t, off=0.0):
@@ -490,7 +535,6 @@ for s in (1, -1):
     build('coscia' + L + '_gonna', 'coscia' + L, half, mods=[('SOLIDIFY', dict(thickness=0.004, offset=-1.0))])
     D('coscia' + L).add(band_on(S['skirt'] - 0.042, S['skirt'] + 0.002, 0.0045, arc).xform(toJ))
     D('coscia' + L).add(band_on(S['skirt'] - 0.072, S['skirt'] - 0.062, 0.003, arc).xform(toJ))
-# baschina: dalla vita copre i fianchi e l'attacco delle due metà, con le sue pieghe e l'orlo dorato
 def pep_def(p, a, t, off=0.0):
     """baschina a otto linguette appuntite (motivo a foglia, come il risvolto degli stivali); la piega esce al centro di ogni linguetta"""
     x, y, z = p; w = tri(a * 8 + 0.5); k = 1 + 0.05 * sm(0.03, 0.15, t) * (2 * w - 1) + off / max(0.05, math.hypot(x, z))
@@ -502,7 +546,9 @@ PB = pep.bvh()
 build('anca_baschina', 'anca', pep, mods=[('SOLIDIFY', dict(thickness=0.003, offset=-1.0))])
 hem = [pep_def(sec_point(pep_secs[-1], i / 64, 0.9, 'y'), i / 64, 0.155, 0.0014) for i in range(64)]
 D('anca').add(tube(hem, 0.003, 4, True, 'bordo'))
+
 # borsello appeso alla cintura sul fianco sinistro (+x): cuscinetto di cuoio smussato in Blender (Bevel), patta, bottone, passanti
+pezzo('accessori', 'borsello', richiede='cintura')
 dirp = Vector((sin(0.13 * TAU), 0, cos(0.13 * TAU)))
 pc = probe(PB, Vector((0, 0.046, 0)) + dirp * 0.4, -dirp) + dirp * 0.017            # coordinate dell'anca: la patta arriva sulla cintura
 PM = tr(*pc) @ rot(0, math.atan2(dirp.x, dirp.z), 0); lat = PM.to_3x3() @ Vector((1, 0, 0))
@@ -514,14 +560,17 @@ for sd in (-1, 1):                                   # passanti: strisce di cuoi
     a0 = PM @ Vector((sd * 0.02, 0.02, -0.013)); a1 = bpt + lat * sd * 0.02 + Vector((0, 0.008, 0))
     D('anca').add(tube([tuple(a0), tuple(a1)], 0.0045, 4, False, 'cintura', rx=0.3))
 
-# ================================================================= COLLETTO, MANTELLO
+# ================================================================= COLLETTO (abito), SPILLA, MANTELLO
+pezzo('abiti', 'abito', **ABITO)
 col = Part().add(loft([dict(t=-S['torso'] + 0.006, w=0.072, h=0.068), dict(t=-S['torso'] - 0.02, w=0.061, h=0.058), dict(t=-S['torso'] - 0.048, w=0.064, h=0.061)], N=32, step=0.012, caps=(True, False), mat='abito'))
 D('busto').add(tube([(0.0648 * sin(a / 32 * TAU), S['torso'] + 0.048, 0.0618 * cos(a / 32 * TAU)) for a in range(32)], 0.0022, 4, True, 'bordo'))
 build('busto_colletto', 'busto', col)
-cq = probe(col.bvh(), (0, S['torso'] + 0.024, 0.4), (0, 0, -1), 0.003)          # spilla con la gemma sul davanti del colletto
+pezzo('accessori', 'spilla', richiede='abito')     # spilla con la gemma sul davanti del colletto
+cq = probe(col.bvh(), (0, S['torso'] + 0.024, 0.4), (0, 0, -1), 0.003)
 D('busto').add(tube([tuple(cq + Vector((0.0072 * cos(a / 12 * TAU), 0.0085 * sin(a / 12 * TAU), 0))) for a in range(12)], 0.0019, 5, True, 'metallo'))
 D('busto').add(gem(tuple(cq + Vector((0, 0, 0.0018))), (0.0052, 0.0066, 0.0038)))
 
+pezzo('abiti', 'mantello')
 def cape_pt(u, s):
     th = (0.55 + 0.9 * u) * PI; L = 1.15
     rx = 0.13 + 0.085 * sm(0, 0.13, s) + 0.07 * s; rz = 0.1 + 0.05 * sm(0, 0.13, s) + 0.05 * s
@@ -536,73 +585,65 @@ for j in range(NS):
         a, b, c, d = j * (NU + 1) + i, j * (NU + 1) + i + 1, (j + 1) * (NU + 1) + i, (j + 1) * (NU + 1) + i + 1
         cape.face([a, b, d, c], [(i / NU * 3, 1 - j / NS * 2), ((i + 1) / NU * 3, 1 - j / NS * 2), ((i + 1) / NU * 3, 1 - (j + 1) / NS * 2), (i / NU * 3, 1 - (j + 1) / NS * 2)], 'mantello')
 build('mantello_telo', 'mantello', cape, mods=[('SOLIDIFY', dict(thickness=0.006, offset=0.0))])
-# foglia elfica ricamata in oro al centro della schiena: contorno a punta, nervatura centrale e venature
-CPB = cape.bvh(); lc_y, lh, lw2 = -0.5, 0.26, 0.075
+CPB = cape.bvh(); lc_y, lh, lw2 = -0.5, 0.26, 0.075   # foglia elfica ricamata in oro al centro della schiena
 def on_cape(x, y): q = probe(CPB, (x, y, -0.6), (0, 0, 1), 0.0045); return tuple(q) if q else None
 leaf = [on_cape(sd * lw2 * sin(PI * f) ** 0.8 * (1 - 0.25 * f), lc_y + lh / 2 - lh * f) for sd in (1, -1) for f in ([k / 20 for k in range(21)] if sd > 0 else [1 - k / 20 for k in range(1, 20)])]
-emb = Part()
-emb.add(tube([p for p in leaf if p], 0.0026, 4, True, 'bordo'))
-emb.add(tube([p for p in [on_cape(0, lc_y + lh / 2 - lh * k / 16) for k in range(17)] + [on_cape(0, lc_y - lh / 2 - 0.05)] if p], 0.0024, 4, False, 'bordo'))
+D('mantello').add(tube([p for p in leaf if p], 0.0026, 4, True, 'bordo'))
+D('mantello').add(tube([p for p in [on_cape(0, lc_y + lh / 2 - lh * k / 16) for k in range(17)] + [on_cape(0, lc_y - lh / 2 - 0.05)] if p], 0.0024, 4, False, 'bordo'))
 for k in range(1, 5):
     y0 = lc_y + lh / 2 - lh * (0.15 + 0.17 * k)
     for sd in (1, -1):
         vein = [on_cape(sd * lw2 * 0.8 * sin(PI * (0.15 + 0.17 * k)) ** 0.8 * f, y0 + 0.035 * f) for f in (0, 0.33, 0.66, 0.9)]
-        emb.add(tube([p for p in vein if p], 0.0018, 4, False, 'bordo'))
-D('mantello').add(emb)
-cp = Part()
-cp.add(tube([cape_pt(i / NU, 1.0) for i in range(NU + 1)], 0.0045, 4, False, 'bordo'))
-for u in (0.0, 1.0): cp.add(tube([cape_pt(u, j / NS) for j in range(NS + 1)], 0.003, 4, False, 'bordo'))
+        D('mantello').add(tube([p for p in vein if p], 0.0018, 4, False, 'bordo'))
+D('mantello').add(tube([cape_pt(i / NU, 1.0) for i in range(NU + 1)], 0.0045, 4, False, 'bordo'))
+for u in (0.0, 1.0): D('mantello').add(tube([cape_pt(u, j / NS) for j in range(NS + 1)], 0.003, 4, False, 'bordo'))
 for u, sd in ((0.0, 1), (1.0, -1)):                 # fermagli d'argento in cima al mantello
-    q = Vector(cape_pt(u, 0.035)); cp.add(ellipsoid(tuple(q), (0.011, 0.011, 0.011), 12, 'metallo')); cp.add(gem(tuple(q + Vector((sd * 0.008, 0.0, 0.006))), (0.004, 0.005, 0.004)))
-D('mantello').add(cp)
+    q = Vector(cape_pt(u, 0.035)); D('mantello').add(ellipsoid(tuple(q), (0.011, 0.011, 0.011), 12, 'metallo')); D('mantello').add(gem(tuple(q + Vector((sd * 0.008, 0.0, 0.006))), (0.004, 0.005, 0.004)))
 
 # ================================================================= BRACCIA
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
-    arm = Part()
     # braccio: la spalla tonda fa parte dello stesso pezzo (niente sfera appoggiata)
-    arm.add(loft([dict(t=-0.047, w=0.012, h=0.012), dict(t=-0.04, w=0.04 * aw, h=0.042 * aw), dict(t=-0.02, w=0.06 * aw, h=0.062 * aw), dict(t=0.02, w=0.06 * aw, h=0.064 * aw, oy=0.003),
-                  dict(t=0.1, w=0.056 * aw, h=0.066 * aw, oy=0.008), dict(t=S['upper'] * 0.8, w=0.05 * aw, h=0.054 * aw), dict(t=S['upper'] + 0.02, w=0.047 * aw, h=0.05 * aw)], N=24, step=0.025, mat='abito'))
-    build('spalla' + L + '_braccio', 'spalla' + L, arm)
+    arm_secs = [dict(t=-0.047, w=0.012, h=0.012), dict(t=-0.04, w=0.04 * aw, h=0.042 * aw), dict(t=-0.02, w=0.06 * aw, h=0.062 * aw), dict(t=0.02, w=0.06 * aw, h=0.064 * aw, oy=0.003),
+                dict(t=0.1, w=0.056 * aw, h=0.066 * aw, oy=0.008), dict(t=S['upper'] * 0.8, w=0.05 * aw, h=0.054 * aw), dict(t=S['upper'] + 0.02, w=0.047 * aw, h=0.05 * aw)]
+    corpo()
+    build('spalla' + L + '_corpo', 'spalla' + L, loft(shrink(arm_secs, 0.004), N=24, step=0.025, mat='pelle'), extras={'regione': 'braccio'})
+    pezzo('abiti', 'abito', **ABITO)
+    arm = loft(arm_secs, N=24, step=0.025, mat='abito')
+    build('spalla' + L + '_abito', 'spalla' + L, arm)
+    pezzo('accessori', 'bracciali_alti', richiede='abito')
     AB = arm.bvh()
     for yy in (-0.163, -0.176): D('spalla' + L).add(tube(ring_on(AB, yy, 24, 0.0014), 0.0018, 4, True, 'bordo'))   # bracciale alto, doppio cerchio
-    # spallaccio: tre lamelle d'argento bordate d'oro, con i ribattini
-    pl, pr = Part(), Part()
+    pezzo('abiti', 'spallacci')                     # spallaccio: tre lamelle d'argento bordate d'oro, con i ribattini
+    pl = Part()
     for k in range(3):
         r0 = 0.076 - 0.009 * k; M = tr(s * (0.004 + 0.004 * k), 0.016 - 0.03 * k, 0) @ rot(0, 0, -s * (0.2 + 0.17 * k)) @ sc(1, 0.5, 1.1)
         dome = sphere_grid(20, 6, PI * 0.47, lambda x, y, z, r0=r0: (x * r0, y * r0, z * r0), 'metallo'); dome.xform(M); pl.add(dome)
         rim = [tuple(M @ Vector((r0 * -cos(i / 28 * TAU) * sin(PI * 0.47), r0 * cos(PI * 0.47), r0 * sin(i / 28 * TAU) * sin(PI * 0.47)))) for i in range(28)]
-        pr.add(tube(rim, 0.0024, 4, True, 'bordo'))
+        D('spalla' + L).add(tube(rim, 0.0024, 4, True, 'bordo'))
         for ph in ((PI if s > 0 else 0.0) + d for d in (-0.35 * PI, 0.35 * PI)):
-            q = M @ Vector((r0 * 1.04 * -cos(ph) * sin(0.33 * PI), r0 * 1.04 * cos(0.33 * PI), r0 * 1.04 * sin(ph) * sin(0.33 * PI))); pr.add(ellipsoid(tuple(q), (0.0028, 0.0028, 0.0028), 8, 'bordo'))
+            q = M @ Vector((r0 * 1.04 * -cos(ph) * sin(0.33 * PI), r0 * 1.04 * cos(0.33 * PI), r0 * 1.04 * sin(ph) * sin(0.33 * PI))); D('spalla' + L).add(ellipsoid(tuple(q), (0.0028, 0.0028, 0.0028), 8, 'bordo'))
     build('spalla' + L + '_spallaccio', 'spalla' + L, pl, mods=[('SOLIDIFY', dict(thickness=0.0035, offset=-1.0))])
-    D('spalla' + L).add(pr)
-    # avambraccio, manica a campana con le pieghe e l'orlo che scende dietro, bracciale allacciato, mano
-    fa = Part()
-    fa.add(loft([dict(t=-0.03, w=0.048 * aw, h=0.05 * aw), dict(t=0.06, w=0.052 * aw, h=0.054 * aw, oy=0.004), dict(t=0.13, w=0.045 * aw, h=0.047 * aw)], N=24, step=0.02, mat='abito'))
-    fa.add(loft(taper(0.12, S['fore'] + 0.012, 0.031 * aw, 0.033 * aw, 0.027 * aw, 0.03 * aw, 0, 4), N=16, step=0.02, mat='pelle'))
-    br = loft([dict(t=0.165, w=0.037, h=0.039), dict(t=0.21, w=0.034, h=0.036), dict(t=0.262, w=0.03, h=0.032)], N=24, step=0.016, mat='cuoio')
-    BR = br.bvh(); fa.add(br)
-    for tt in (0.17, 0.257):
-        y = -tt; D('gomito' + L).add(tube(ring_on(BR, y, 24, 0.001), 0.0022, 4, True, 'cintura'))
-    for k in range(3):                               # lacci sull'esterno del bracciale
-        y0, y1 = -(0.18 + k * 0.024), -(0.18 + (k + 1) * 0.024)
-        for x0, x1 in ((-0.008, 0.008), (0.008, -0.008)):
-            a = probe(BR, (s * 0.4, y0, x0), (-s, 0, 0), 0.0012); b = probe(BR, (s * 0.4, y1, x1), (-s, 0, 0), 0.0012)
-            if a and b: D('gomito' + L).add(tube([tuple(a), tuple((a + b) / 2 + Vector((s * 0.0015, 0, 0))), tuple(b)], 0.0013, 4, False, 'bordo'))
-    # mano semplice (scelta dell'autore) ma fine: palmo stretto, dita unite appena piegate verso il palmo con i solchi accennati,
-    # pollice piccolo appoggiato lungo l'indice
+
+    # avambraccio nudo e mano semplice (scelta dell'autore) ma fine: palmo stretto, dita unite appena piegate verso il palmo
+    # con i solchi accennati, pollice piccolo appoggiato lungo l'indice
+    corpo()
+    build('gomito' + L + '_corpo', 'gomito' + L, loft([dict(t=-0.03, w=0.033, h=0.035), dict(t=0.06, w=0.036, h=0.039, oy=0.003), dict(t=0.16, w=0.029, h=0.031),
+                                                       dict(t=0.24, w=0.023, h=0.025), dict(t=0.266, w=0.021, h=0.023)], N=20, step=0.025, mat='pelle'), extras={'regione': 'avambraccio'})
     def hand_def(p, a, t, s=s):
         x, y, z = p; f = sm(0.322, 0.34, t)
         g = sum(exp(-((z - zk) / 0.003) ** 2) for zk in (-0.012, 0.0, 0.012)) * 0.1 * f
         curl = 0.013 * sm(0.3, 0.372, t) ** 1.5
         return (x * (1 - g) - s * curl, y, z)
-    fa.add(loft([dict(t=0.258, w=0.0175, h=0.021), dict(t=0.272, w=0.0162, h=0.026), dict(t=0.295, w=0.0152, h=0.032, oy=0.001), dict(t=0.318, w=0.0142, h=0.0325, oy=0.002),
+    hand = loft([dict(t=0.258, w=0.0175, h=0.021), dict(t=0.272, w=0.0162, h=0.026), dict(t=0.295, w=0.0152, h=0.032, oy=0.001), dict(t=0.318, w=0.0142, h=0.0325, oy=0.002),
                  dict(t=0.338, w=0.0122, h=0.029, oy=0.003), dict(t=0.356, w=0.0102, h=0.024, oy=0.004), dict(t=0.368, w=0.007, h=0.016, oy=0.005), dict(t=0.374, w=0.003, h=0.007, oy=0.005)],
-                N=20, step=0.007, deform=hand_def, mat='pelle'))
+                N=20, step=0.007, deform=hand_def, mat='pelle')
     th = loft(taper(0, 0.04, 0.0072, 0.0082, 0.005, 0.0056, 0.08, 5), N=12, step=0.007, mat='pelle')
-    th.xform(tr(-s * 0.006, -0.283, 0.026) @ rot(-0.3, 0, -s * 0.14)); fa.add(th)
-    build('gomito' + L + '_avambraccio', 'gomito' + L, fa)
+    th.xform(tr(-s * 0.006, -0.283, 0.026) @ rot(-0.3, 0, -s * 0.14)); hand.add(th)
+    build('gomito' + L + '_mano', 'gomito' + L, hand, extras={'regione': 'mano'})
+
+    pezzo('abiti', 'abito', **ABITO)                 # manica dell'abito e manica a campana con le pieghe e l'orlo a punte che scende dietro
+    build('gomito' + L + '_abito', 'gomito' + L, loft([dict(t=-0.03, w=0.048 * aw, h=0.05 * aw), dict(t=0.06, w=0.052 * aw, h=0.054 * aw, oy=0.004), dict(t=0.13, w=0.045 * aw, h=0.047 * aw)], N=24, step=0.02, mat='abito'))
     def sleeve_pt(u, v):
         a = u * TAU; back = 0.5 - 0.5 * cos(a)            # 0 davanti, 1 dietro
         t = 0.075 + v * (0.12 + 0.065 * back ** 1.5) + 0.02 * v ** 3 * tri(u * 6) ** 1.5; r = 0.037 + 0.034 * v ** 1.4
@@ -618,55 +659,80 @@ for s in (1, -1):
     build('gomito' + L + '_manica', 'gomito' + L, slv, mods=[('SOLIDIFY', dict(thickness=0.003, offset=1.0))])
     D('gomito' + L).add(tube([sleeve_pt(i / NU2, 1.0) for i in range(NU2)], 0.0032, 4, True, 'bordo'))
 
-# ================================================================= GAMBE E STIVALI
+    pezzo('abiti', 'bracciali')                     # bracciale di cuoio allacciato sull'esterno
+    br = loft([dict(t=0.165, w=0.037, h=0.039), dict(t=0.21, w=0.034, h=0.036), dict(t=0.262, w=0.03, h=0.032)], N=24, step=0.016, mat='cuoio')
+    BR = br.bvh()
+    for tt in (0.17, 0.257): D('gomito' + L).add(tube(ring_on(BR, -tt, 24, 0.001), 0.0022, 4, True, 'cintura'))
+    for k in range(3):
+        y0, y1 = -(0.18 + k * 0.024), -(0.18 + (k + 1) * 0.024)
+        for x0, x1 in ((-0.008, 0.008), (0.008, -0.008)):
+            a = probe(BR, (s * 0.4, y0, x0), (-s, 0, 0), 0.0012); b = probe(BR, (s * 0.4, y1, x1), (-s, 0, 0), 0.0012)
+            if a and b: D('gomito' + L).add(tube([tuple(a), tuple((a + b) / 2 + Vector((s * 0.0015, 0, 0))), tuple(b)], 0.0013, 4, False, 'bordo'))
+    build('gomito' + L + '_bracciale', 'gomito' + L, br)
+
+# ================================================================= GAMBE: cosce, gambe e piedi nudi, calze, stivali
+fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -0.47 - fy        # centro del piede e suolo rispetto al ginocchio
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
-    leg = Part()
-    leg.add(loft([dict(t=-0.05, w=(0.074 + 0.012) * lw, h=0.08 * lw), dict(t=0.1, w=(0.074 + 0.006) * lw, h=0.084 * lw, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw, h=0.07 * lw, oy=0.006),
-                  dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)], N=24, step=0.03, mat='calze'))
-    build('coscia' + L + '_gamba', 'coscia' + L, leg)
+    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw, h=0.064 * lw), dict(t=-0.05, w=(0.074 + 0.012) * lw, h=0.08 * lw),   # cima a cupola: niente gradino sui fianchi
+                  dict(t=0.1, w=(0.074 + 0.006) * lw, h=0.084 * lw, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw, h=0.07 * lw, oy=0.006),
+                  dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
+    shin_secs = [dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
+                 dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw), dict(t=0.33, w=0.031, h=0.035, oy=-0.004), dict(t=S['shin'] + 0.022, w=0.029, h=0.033, oy=-0.004)]
+    corpo()
+    build('coscia' + L + '_corpo', 'coscia' + L, loft(shrink(thigh_secs, 0.003), N=24, step=0.03, mat='pelle'), extras={'regione': 'coscia'})
+    build('ginocchio' + L + '_corpo', 'ginocchio' + L, loft(shrink(shin_secs, 0.003), N=24, step=0.025, mat='pelle'), extras={'regione': 'gamba'})
+    # piede nudo: tallone, arco, pianta e dita accennate (solchi); l'alluce verso l'interno, le dita esterne più corte
+    fs = [(-0.065, 0.019, 0.02), (-0.05, 0.026, 0.032), (-0.025, 0.029, 0.044), (0.02, 0.032, 0.038), (0.07, 0.036, 0.025), (0.115, 0.038, 0.016),
+          (0.145, 0.034, 0.012), (0.163, 0.026, 0.009), (0.171, 0.01, 0.005)]
+    fsec = [dict(t=t, w=w, h=h, oy=g0 + h + 0.001, ox=-s * 0.005 * sm(0.07, 0.17, t)) for t, w, h in fs]
+    def toe_def(p, a, t, s=s):
+        x, y, z = p; up = max(0.0, cos(a * TAU)); f = sm(0.128, 0.15, t)
+        toes = [xk - s * 0.005 for xk in (-0.02, -0.008, 0.003, 0.013, 0.022)]          # cinque dita: solchi sopra e punte tonde davanti
+        y -= 0.004 * up * f * sum(exp(-((x - (a_ + b_) / 2) / 0.0024) ** 2) for a_, b_ in zip(toes, toes[1:]))
+        z -= 0.008 * sm(0.14, 0.17, t) * (1 - max(exp(-((x - xk) / 0.0055) ** 2) for xk in toes))
+        return (x, y, z - 0.02 * sm(0.11, 0.17, t) * max(0.0, s * x) / 0.04)
+    foot = loft(fsec, N=28, axis='z', R=0.75, step=0.008, deform=toe_def, mat='pelle'); foot.xform(tr(0, fy, 0.03))
+    build('ginocchio' + L + '_piede', 'ginocchio' + L, foot, extras={'regione': 'piede'})
+
+    pezzo('intimo', 'calze', nasconde=('coscia', 'gamba'))
+    build('coscia' + L + '_calze', 'coscia' + L, loft(thigh_secs, N=24, step=0.03, mat='calze'), extras={'regione': 'coscia'})
+    build('ginocchio' + L + '_calze', 'ginocchio' + L, loft(shin_secs, N=24, step=0.025, mat='calze'), extras={'regione': 'gamba'})
+
+    pezzo('abiti', 'stivali', nasconde=('gamba', 'piede'))
     sh = Part()
-    sh.add(loft([dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
-                 dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw)], N=24, step=0.025, mat='calze'))
     boot = loft([dict(t=0.035, w=0.062 * lw, h=0.068 * lw), dict(t=0.12, w=0.058 * lw, h=0.07 * lw, oy=-0.008), dict(t=0.22, w=0.052 * lw, h=0.06 * lw, oy=-0.006),
                  dict(t=0.31, w=0.044 * lw, h=0.05 * lw, oy=-0.002), dict(t=S['shin'] + 0.02, w=0.048 * lw, h=0.054 * lw)], N=28, step=0.025, mat='cuoio')
     KB = boot.bvh(); sh.add(boot)
-    # risvolto con la punta sul davanti e il profilo dorato
-    def cuff_def(p, a, t):
+    def cuff_def(p, a, t):                          # risvolto con la punta sul davanti e il profilo dorato
         d = (a + 0.5) % 1 - 0.5; dip = 0.034 * exp(-(d / 0.07) ** 2) * sm(0.02, 0.07, t)
         return (p[0], p[1] - dip, p[2])
-    cuff = loft([dict(t=-0.008, w=0.066 * lw, h=0.072 * lw), dict(t=0.02, w=0.071 * lw, h=0.077 * lw), dict(t=0.07, w=0.07 * lw, h=0.076 * lw)], N=32, step=0.02, caps=(True, False), deform=cuff_def, mat='cuoio')
-    sh.add(cuff)
+    sh.add(loft([dict(t=-0.008, w=0.066 * lw, h=0.072 * lw), dict(t=0.02, w=0.071 * lw, h=0.077 * lw), dict(t=0.07, w=0.07 * lw, h=0.076 * lw)], N=32, step=0.02, caps=(True, False), deform=cuff_def, mat='cuoio'))
     ring = [cuff_def(sec_point(dict(t=0.07, w=0.07 * lw + 0.0012, h=0.076 * lw + 0.0012), i / 32, 0.9, 'y'), i / 32, 0.07) for i in range(32)]
     D('ginocchio' + L).add(tube(ring, 0.0022, 4, True, 'bordo'))
-    # lacci incrociati davanti, con gli occhielli
-    eye = []
+    eye = []                                        # lacci incrociati davanti, con gli occhielli
     for k in range(6):
         y = -(0.13 + k * 0.035)
         for sd in (-1, 1): q = probe(KB, (sd * 0.012, y, 0.4), (0, 0, -1), 0.0008); eye.append(q); D('ginocchio' + L).add(ellipsoid(tuple(q), (0.0022, 0.0022, 0.0012), 6, 'metallo'))
     for k in range(5):
         L0, R0, L1, R1 = eye[2 * k], eye[2 * k + 1], eye[2 * k + 2], eye[2 * k + 3]
         for a, b in ((L0, R1), (R0, L1)): D('ginocchio' + L).add(tube([tuple(a), tuple((a + b) / 2 + Vector((0, 0, 0.003))), tuple(b)], 0.0015, 4, False, 'bordo'))
-    # cucitura sul fianco esterno
-    seam = [tuple(probe(KB, (s * 0.4, -t, 0.0), (-s, 0, 0), 0.0006)) for t in [0.08 + k * 0.02 for k in range(15)]]
+    seam = [tuple(probe(KB, (s * 0.4, -t, 0.0), (-s, 0, 0), 0.0006)) for t in [0.08 + k * 0.02 for k in range(15)]]   # cucitura sul fianco esterno
     D('ginocchio' + L).add(tube(seam, 0.0011, 4, False, 'cintura'))
-    # piede a punta, suola e tacco
-    fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -0.47 - fy        # suolo rispetto al centro del piede
-    fs = [dict(t=-0.078, w=0.03, h=0.028), dict(t=-0.06, w=0.044, h=0.044), dict(t=-0.02, w=0.05, h=0.05), dict(t=0.04, w=0.05, h=0.043), dict(t=0.1, w=0.046, h=0.032),
-          dict(t=0.15, w=0.036, h=0.024), dict(t=0.19, w=0.02, h=0.016), dict(t=0.212, w=0.004, h=0.006)]
-    for d in fs: d['oy'] = g0 + 0.013 + d['h'] * 0.98
-    foot = loft(fs, N=20, axis='z', step=0.022, mat='cuoio'); foot.xform(tr(0, fy, 0.03)); sh.add(foot)
-    so = [dict(t=d['t'] - 0.004 if i == 0 else d['t'], w=d['w'] * 1.08 + 0.003, h=0.0065, oy=g0 + 0.0065 + 0.0035) for i, d in enumerate(fs[:-1])] + [dict(t=0.217, w=0.003, h=0.004, oy=g0 + 0.01)]
-    sole = loft(so, N=16, axis='z', R=0.3, step=0.03, mat='cintura'); sole.xform(tr(0, fy, 0.03)); sh.add(sole)
-    heel = loft([dict(t=-0.082, w=0.032, h=0.009, oy=g0 + 0.009), dict(t=-0.06, w=0.042, h=0.009, oy=g0 + 0.009), dict(t=-0.02, w=0.044, h=0.009, oy=g0 + 0.009)], N=24, axis='z', R=0.3, step=0.01, mat='cintura')
-    heel.xform(tr(0, fy, 0.03)); sh.add(heel)
+    bs = [dict(t=-0.078, w=0.03, h=0.028), dict(t=-0.06, w=0.044, h=0.044), dict(t=-0.02, w=0.05, h=0.05), dict(t=0.04, w=0.05, h=0.043), dict(t=0.1, w=0.046, h=0.032),
+          dict(t=0.15, w=0.036, h=0.024), dict(t=0.19, w=0.02, h=0.016), dict(t=0.212, w=0.004, h=0.006)]   # piede a punta, suola e tacco
+    for d in bs: d['oy'] = g0 + 0.013 + d['h'] * 0.98
+    sh.add(loft(bs, N=20, axis='z', step=0.022, mat='cuoio').xform(tr(0, fy, 0.03)))
+    so = [dict(t=d['t'] - 0.004 if i == 0 else d['t'], w=d['w'] * 1.08 + 0.003, h=0.0065, oy=g0 + 0.0065 + 0.0035) for i, d in enumerate(bs[:-1])] + [dict(t=0.217, w=0.003, h=0.004, oy=g0 + 0.01)]
+    sh.add(loft(so, N=16, axis='z', R=0.3, step=0.03, mat='cintura').xform(tr(0, fy, 0.03)))
+    sh.add(loft([dict(t=-0.082, w=0.032, h=0.009, oy=g0 + 0.009), dict(t=-0.06, w=0.042, h=0.009, oy=g0 + 0.009), dict(t=-0.02, w=0.044, h=0.009, oy=g0 + 0.009)], N=24, axis='z', R=0.3, step=0.01, mat='cintura').xform(tr(0, fy, 0.03)))
     build('ginocchio' + L + '_stivale', 'ginocchio' + L, sh)
 
-for j, g in DET.items(): build(j + '_dettagli', j, g, extras={'noOutline': 1})
+for (j, pz), (g, tags) in DET.items(): build(j + '_' + pz + '_dettagli', j, g, tags=tags, extras={'noOutline': 1})
 
 # ---------------------------------------------------------------- esporta
-tri = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
-print('oggetti', len([o for o in bpy.data.objects if o.type == 'MESH']), 'facce', tri)
+nfaces = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
+print('oggetti', len([o for o in bpy.data.objects if o.type == 'MESH']), 'facce', nfaces)
 if args.blend: bpy.ops.wm.save_as_mainfile(filepath=args.blend)
 bpy.ops.export_scene.gltf(filepath=args.out, export_format='GLB', export_apply=True, export_yup=True, export_animations=False,
                           export_texcoords=True, export_normals=True, export_materials='EXPORT', export_image_format='NONE', export_extras=True)

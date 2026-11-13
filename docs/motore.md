@@ -68,7 +68,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
 | `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
 | `characters/villager.js` | `villager()`, `elf()`, `elfLook()`, `humanMats(look, face)`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta`; aspetto e materiali riusabili dai modelli di Blender |
-| `characters/elfa3d.js` | `loadElfa3d(url)`, `setElfa3d(buffer)`, `elfa3d()`, `ELFA3D_MATERIALS` | l'elfa modellata in Blender (`engine/assets/elfa.glb`): stessi giunti e clip di `elf()`, più dettaglio |
+| `characters/elfa3d.js` | `loadElfa3d(url)`, `setElfa3d(buffer)`, `elfa3d({vesti})`, `vesti(attore, capi)`, `pezziElfa3d()`, `tuttiIPezzi()`, `scegliVisibili(tags, capi)`, `ELFA3D_MATERIALS` | l'elfa modellata in Blender (`engine/assets/elfa.glb`): stessi giunti e clip di `elf()`, più dettaglio; corpo base, intimo, abiti, accessori e capelli che si mettono e si tolgono |
 | `core/glb.js` | `parseGlb(buffer)` | lettore minimo di `.glb`: nodi, mesh, uv, nomi dei materiali (`userData.mat`) e proprietà di Blender (`userData`) |
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
@@ -86,7 +86,7 @@ I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un serv
 
 ## Prova dei personaggi
 
-`engine/demo/personaggi.html`: un abitante, l'elfa del motore, l'elfa modellata in Blender e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
+`engine/demo/personaggi.html`: un abitante, l'elfa del motore, l'elfa modellata in Blender e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/guardaroba.html`: l'elfa di Blender su una pedana, con un pulsante per ogni capo (dal corpo base all'abito completo) e le animazioni. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
 
 ## Modelli fatti in Blender
 
@@ -98,7 +98,7 @@ Blender si comanda con script Python: lo script costruisce il modello e lo espor
 - Oppure con Blender installato (su macOS: Blender.app):
   `/Applications/Blender.app/Contents/MacOS/Blender --background --python engine/tools/blender/elfa.py -- --out engine/assets/elfa.glb`
   Aggiungi `--blend elfa.blend` per salvare anche il file da aprire in Blender.
-- Regole: si scrive in coordinate three (x destra, y su, z avanti) e si converte in quelle di Blender solo quando si crea la mesh; un personaggio a marionetta ha i giunti come oggetti vuoti con i nomi del motore e nessuna rotazione a riposo; i materiali hanno solo un nome, colori e texture li mette il modulo del motore; i dettagli piccoli vanno in un oggetto con la proprietà `noOutline`.
+- Regole: si scrive in coordinate three (x destra, y su, z avanti) e si converte in quelle di Blender solo quando si crea la mesh; un personaggio a marionetta ha i giunti come oggetti vuoti con i nomi del motore e nessuna rotazione a riposo; i materiali hanno solo un nome, colori e texture li mette il modulo del motore; i dettagli piccoli vanno in un oggetto con la proprietà `noOutline`; ogni oggetto ha le etichette del guardaroba (`strato`, `pezzo`, `regione`, `nasconde`, `richiede`: vedi `docs/oggetti.md` › Corpo base e capi), che lo script mette con `corpo()` e `pezzo(...)` prima di costruire.
 - Il modello si carica con `fetch`, quindi la pagina va servita via HTTP. In Node (test) si legge il file e si passa a `setElfa3d(buffer)`.
 
 ## Anteprime senza browser

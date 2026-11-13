@@ -61,3 +61,9 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 - **Ciocche ottenute stirando la sfera dei capelli**: la parte stirata è una superficie sola, vista dal lato interno sparisce (facce posteriori scartate). Va bene solo dove il corpo la copre da dietro (ciocche davanti alle spalle, capelli sulla schiena).
 - **Capelli lunghi sopra il mantello**: il mantello oscilla sul suo giunto (fino a 0,4 rad nella corsa) e attraverserebbe i capelli, che seguono la testa. Con pezzi rigidi i capelli lunghi stanno sotto il mantello.
 - **Accessori appesi** (borsello e passanti): un pezzo che pende troppo in basso lascia un vuoto sotto la cintura e i passanti diventano stecchi. Controllare da vicino e da più lati che tocchi ciò a cui è appeso.
+
+## Corpo base e vestiti a strati
+- **Pelle che buca la stoffa**: un corpo sotto un vestito aderente lo attraversa in qualche punto (soprattutto con pezzi rigidi che ruotano). Invece di rimpicciolire il corpo, nascondere le regioni coperte (`nasconde`); lo stesso vale fra strati di vestiti (calze sotto gli stivali).
+- **Accessori che galleggiano**: un pezzo appoggiato su un altro capo (borsello sulla cintura, spilla sul colletto, diadema sui capelli) resta sospeso nel vuoto se quel capo si toglie. Dichiararlo con `richiede`.
+- **Cima delle cosce piatta**: il tappo piatto della coscia fa un gradino sui fianchi del corpo nudo. Fare la cima a cupola e il bacino un po' più stretto delle cosce, così sono loro a disegnare i fianchi.
+- **Bacino più largo delle cosce**: sporge e sembra un pannolone; con l'intimo sopra peggiora.
