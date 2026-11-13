@@ -22,7 +22,7 @@ L'obiettivo in una frase: **un borgo fantasy reale, bagnato e vissuto, in pixel-
 
 ### Da evitare (feedback esplicito dell'autore)
 
-- Look **cartoon / cel-shading**: palette pastello, forme primitive, proporzioni tozze, contorni neri.
+- Look **cartoon / cel-shading** per il mondo: palette pastello, forme primitive, proporzioni tozze, contorni neri. **Eccezione decisa dall'autore: i personaggi** (vedi §9).
 - **Effetto PS1** (vertici tremolanti, texture che si deformano). Le righe orizzontali sì, il PS1 no.
 - **Fughe tra elementi spesse o curve "morbide"**: le fughe sono sottili e seguono la struttura (vedi §6).
 - Cartelli con scritte.
@@ -122,6 +122,14 @@ Tutti i colori passano da `mute()` (desatura del 20%, scurisce un poco). Valori 
   6. pioggia e banchi di nebbia tinti d'arancio vicino alle luci.
 - Cielo notturno: nuvole basse illuminate da sotto dal bagliore del borgo.
 
+### Giornata di sole (`reference/valfiorita-sole.html`)
+- Nebbia azzurra `#b4c8d6`, densità 0,011 (si vede lontano, gli strati restano leggibili).
+- `Hemisphere(#c4dcf2 / #6b5e44, 0.55)`, `Ambient(#fff2dc, 0.06)`, sole caldo `#fff0d2 1.05` da metà pomeriggio, alle spalle di chi entra in piazza: ombre nette e lunghe.
+- Cielo: azzurro che sale dalla foschia, alone del sole, cumuli bianchi con la pancia grigio-azzurra (nello shader del cielo, niente nuvole a palle).
+- Asciutto: niente pioggia, gocce, pozzanghere e banchi di nebbia; i riflessi (SSR) solo sull'acqua; acqua azzurra con scintille.
+- Finestre non accese (vetro scuro con le tende), lanterne spente; pulviscolo dorato nell'aria.
+- Post: foschia bassa ×0,16, bloom solo sui bianchi (soglia 0,86) e ×0,3, saturazione +5%, neri sollevati verso il caldo.
+
 ### Strati lontani
 - Tre anelli di pareti di roccia boscose (raggi 56, 74 e 96 m). Hanno materiale proprio, già mescolato al colore della nebbia (0,42 → 0,6 → 0,76) e con una foschia di valle alla base.
 
@@ -155,3 +163,12 @@ Tutti i colori passano da `mute()` (desatura del 20%, scurisce un poco). Valori 
 - Particelle e vegetazione minuta con **InstancedMesh** (`frustumCulled=false` se le istanze sono sparse).
 - Foglie su card con alphaTest, senza ombre (`castShadow=false`).
 - Massimo 8 PointLight e solo per pixel; controllare il limite di uniform del dispositivo (vedi `docs/errori-noti.md`).
+
+---
+
+## 9. Personaggi (regola dell'autore)
+
+- I personaggi sono in **cel shading anime** (stile JRPG alla Atelier), sopra il mondo realistico: `setToon(root, true)` è la base.
+- Luce propria del personaggio, fissata alla camera: non si aggiungono luci alla scena per i personaggi.
+- Ombra a due toni tinta di lilla (mai nera), rim light calda, contorno sottile color inchiostro caldo.
+- **La camera in prima persona sta all'altezza degli occhi degli abitanti** (`eyeHeight(villager())`, circa 1,6 m), così chi gioca ha la stessa statura degli altri personaggi.

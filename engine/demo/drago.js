@@ -36,10 +36,10 @@ bake(world);
 /* ---------- il drago e un abitante per la scala ---------- */
 const D = { r: 11, speed: 2.1, ang: 0, home: [0, 0, -1.5], face: 0.25 };
 let drago = null;
-let toonOn = false;
+let toonOn = true;   // cel shading: è lo stile di base dei personaggi
 function spawnDragon() { const prev = drago && drago.anim.current(); if (drago) scene.remove(drago.root); drago = dragon(); scene.add(drago.root); drago.anim.play(prev || 'fermo', 0); drago.root.position.set(...D.home); drago.root.rotation.y = D.face; if (toonOn) setToon(drago.root, true); }
 spawnDragon();
-const person = villager(); person.root.position.set(4.2, 0, 9); person.root.rotation.y = PI + 0.4; scene.add(person.root); person.anim.play('fermo', 0);
+const person = villager(); person.root.position.set(4.2, 0, 9); person.root.rotation.y = PI + 0.4; scene.add(person.root); person.anim.play('fermo', 0); if (toonOn) setToon(person.root, true);
 // il drago è un ostacolo che si sposta: non gli si passa attraverso
 const collide = p => {
   for (const o of E.obstacles) { const dx = p.x - o[0], dz = p.z - o[1], d = Math.hypot(dx, dz), m = o[2] + 0.35; if (d < m && d > 1e-4) { p.x = o[0] + dx / d * m; p.z = o[1] + dz / d * m; } }

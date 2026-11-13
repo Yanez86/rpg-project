@@ -44,7 +44,7 @@ const actors = {
   gatto: { make: cat, r: 1.6, speed: { cammina: 0.5, trotta: 1.25 }, dir: -1, ang: PI, home: [1.0, 0, 0.9], face: -0.5 },
 };
 // cel shading: solo i personaggi cambiano aspetto (hanno una luce loro), la scena resta com'è
-let toonOn = false;
+let toonOn = true;   // cel shading: è lo stile di base dei personaggi
 function spawn(key) {
   const a = actors[key]; const prev = a.c && a.c.anim.current();
   if (a.c) scene.remove(a.c.root);

@@ -51,3 +51,4 @@ export { loft, taper } from './characters/loft.js';
 export { cat, catClips } from './characters/cat.js';
 export { dragon, dragonClips } from './characters/dragon.js';
 export { setToon, TOON } from './characters/toon.js';
+export { wanderer, eyeHeight } from './characters/npc.js';

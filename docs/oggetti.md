@@ -123,3 +123,11 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 - Ali: omero, avambraccio, mano con artiglio, quattro dita. La **membrana** è una mesh ricalcolata a ogni frame dalle posizioni delle ossa (`update()`), con il bordo d'uscita a festone. In Godot va rifatta come mesh con scheletro (skinning).
 - Varianti: cremisi, verde bronzo, ardesia, nero.
 - Clip: `fermo` (respiro lento, collo e coda che ondeggiano, ali chiuse), `cammina` (2,4 s, passo laterale), `ruggisce` (si impenna, apre la mascella e le ali), `vola` (battito d'ali, zampe raccolte, si alza di circa 4 m).
+
+## Comparse che passeggiano — `wanderer()`, `eyeHeight()` (`characters/npc.js`)
+- Ciclo: sceglie una meta (`pick()`), si gira (max 3,2 rad/s) e cammina con la clip `cammina` a una velocità che corrisponde al passo dell'animazione (abitante 1,35 m/s, elfa 1,45, gatto 0,5 / trotto 1,25); alla meta si ferma da 1,5 a 7 s.
+- Ogni tanto la meta si raggiunge di corsa (`run`, `runChance`); il gatto a volte si siede a lungo (`rest: 'seduto'`).
+- Se chi gioca si avvicina (2,6 m) si gira verso di lui e saluta; poi non saluta più per 14 s.
+- Si scansano tra loro (`others`) e scansano chi gioca; `collide(p)` della scena le tiene fuori dagli ostacoli. Se in 2 s avanzano meno di 0,5 m cambiano meta.
+- `eyeHeight(actor)`: altezza degli occhi nella posa di riposo (abitante circa 1,61 m); serve per la camera in prima persona.
+- Esempio: `reference/gente-sole.js` (5 abitanti, 2 elfe, 2 gatti in Valfiorita al sole).

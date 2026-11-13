@@ -72,6 +72,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
 | `characters/toon.js` | `setToon(root, on, {outline})`, `TOON` | cel shading "anime" (stile JRPG) solo sui personaggi: luce propria fissata alla camera, ombra lilla a due toni, rim light, contorno sottile; non tocca le luci della scena. `TOON` contiene i parametri |
+| `characters/npc.js` | `wanderer(actor, {pick, groundAt, collide, player, others, ...})`, `eyeHeight(actor)` | comparse che passeggiano, si fermano e salutano chi gioca; altezza degli occhi per la camera |
 | `controls/thirdPerson.js` | `thirdPerson({canvas, actor, walk, run, collide, stick, knob, actions})` | muovi un personaggio in terza persona; clip automatiche `fermo`/`cammina`/`corre`, azioni da tasto (es. E → `saluta`) |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 
@@ -98,3 +99,7 @@ Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, impor
 
 Gli elementi unici della scena di riferimento: fontana a tre vasche, torre del mago, mulino, bancarelle del mercato, lampioni, festoni con bandierine, pozzo, carretto, bacheca, petali che cadono.
 Sono in `reference/valfiorita-pioggia.html` e vanno estratti quando servono, seguendo lo stesso schema.
+
+## Usare il motore in una pagina "classica"
+
+Le scene di `reference/` caricano three r128 come variabile globale (`window.THREE`). Per aggiungerci oggetti del motore (es. le comparse di `reference/valfiorita-sole.html`) l'import map punta `three` a `engine/tools/three-global.js`, che riesporta il three globale: pagina e moduli usano così la stessa copia di three. La pagina espone `window.VF` (scena, camera, `groundAt`, `collide`, `player`, `setEye`, `onTick`) e un modulo come `reference/gente-sole.js` ci aggancia i personaggi. `node --import ./test/register.mjs test/gente-sole.mjs` ne fa la prova di fumo.

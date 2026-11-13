@@ -18,7 +18,7 @@ export const TOON = {
   rim: 0.32, glint: 0.1, saturate: 1.18, lift: 1.06,
   outline: 0x2b1d18, thickness: 0.0026,
 };
-const brightness = () => (E.mood === 'night' ? 0.5 : 0.95);
+const brightness = () => (E.mood === 'night' ? 0.5 : E.mood === 'sun' ? 1.0 : 0.95);
 
 const toonCache = new WeakMap();
 function toonOf(m) {
