@@ -47,6 +47,39 @@ function faceTex(f) {
   });
 }
 
+/**
+ * Modella una sfera unitaria in forma di testa (z = avanti, y = alto): mascella e mento che si stringono,
+ * nuca piena, tempie, viso più piatto, arcate sopraccigliari, orbite, zigomi, naso, labbra, mento.
+ * Le posizioni dei tratti coincidono con quelle dipinte nel volto (occhi a y≈0,07, bocca a y≈−0,48).
+ * inflate > 0 per i gusci dei capelli e della barba (senza naso e labbra).
+ */
+export function shapeHead(g, elf, inflate) {
+  const pa = g.attributes.position, ex = Math.exp, sq = v => v * v;
+  for (let i = 0; i < pa.count; i++) {
+    let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i); const f0 = Math.max(0, Math.min(1, (z - 0.05) / 0.75)), F = f0 * f0 * (3 - 2 * f0);   // peso del viso, raccordato
+    if (y < 0) { const k = Math.pow(-y, 1.25); x *= 1 - (elf ? 0.42 : 0.28) * k; if (z < 0.2) z = z * (1 - 0.35 * k) + 0.2 * 0.35 * k * 0;   // mascella: stretta in basso, il collo arretra
+      if (elf) y *= 1.06; }
+    if (z < 0) z *= 1.03 + 0.05 * Math.max(0, y);                                                                                   // nuca
+    x *= 1 - 0.08 * ex(-sq((y - 0.3) / 0.2)) * (1 - Math.abs(z));                                                                    // tempie
+    if (z > 0.3) { const t = z - 0.3; z = 0.3 + t * (1 - 0.6 * Math.min(1, t / 0.45)); }                                         // piano del viso, raccordato morbido
+    if (y < -0.1) z += 0.06 * Math.min(1, (-y - 0.1) / 0.4) * F;                                                          // il viso inferiore avanza verso il mento
+    if (!inflate) {
+      z += 0.09 * ex(-sq((y - 0.22) / 0.08)) * ex(-1.5 * sq(x / 0.6)) * F;                                                         // arcate sopraccigliari
+      for (const sd of [-1, 1]) z -= 0.1 * ex(-sq((x - sd * 0.3) / 0.15) - sq((y - 0.07) / 0.1)) * F;                              // orbite
+      z += 0.05 * ex(-sq((Math.abs(x) - 0.4) / 0.13) - sq((y + (elf ? 0.0 : 0.06)) / 0.11)) * F;                                    // zigomi
+      z -= 0.035 * ex(-sq((Math.abs(x) - 0.38) / 0.12) - sq((y + 0.36) / 0.14)) * F;                                                // guance appena incavate
+      const nb = ex(-sq(x / (elf ? 0.07 : 0.09))); let n = y > 0.14 || y < -0.32 ? 0 : (0.14 - y) / 0.44; if (y < -0.22) n *= Math.max(0, (y + 0.32) / 0.1);
+      z += (elf ? 0.17 : 0.22) * n * nb * F;                                                                                          // naso
+      z += 0.04 * ex(-sq((Math.abs(x) - 0.12) / 0.05) - sq((y + 0.25) / 0.05)) * F;                                                // ali del naso
+      z += 0.04 * ex(-sq(x / 0.22) - sq((y + 0.43) / 0.05)) * F + 0.035 * ex(-sq(x / 0.18) - sq((y + 0.54) / 0.05)) * F;           // labbra
+      z -= 0.02 * ex(-sq(x / 0.2) - sq((y + 0.64) / 0.05)) * F;                                                                      // solco sotto il labbro
+      z += (elf ? 0.06 : 0.08) * ex(-sq(x / 0.24) - sq((y + 0.82) / 0.1)) * F;                                                       // mento
+    }
+    const k = 1 + (inflate || 0); pa.setXYZ(i, x * k, y * k, z * k);
+  }
+  g.computeVertexNormals(); return g;
+}
+
 const VILLAGER = {
   hip: 0.93, thigh: 0.42, shin: 0.30, W: 1, chest: 0.19, waist: 0.17, hips: 0.18, torso: 0.46, shoulder: 0.24, upper: 0.27, fore: 0.24,
   skirt: 0.26, flare: 1.15, neck: 0.06, head: 1, armW: 1, legW: 1,
@@ -89,19 +122,32 @@ function humanoid(S, look) {
   const neck = joint(torso, 'collo', 0, S.torso + 0.01, 0);
   LO(neck, taper(-0.0, -S.neck - 0.03, 0.045, 0.048, 0.043, 0.046, 0, 3), [M.skin, M.skin], { radial: 10 });
   const head = joint(neck, 'testa', 0, S.neck, 0), hs = S.head;
-  { const g = new THREE.SphereGeometry(1, 24, 16); const m = add(head, g, M.face, 0, 0.125 * hs, 0.005); m.scale.set(0.108 * hs, 0.13 * hs, 0.118 * hs); }
-  { const g = new THREE.ConeGeometry(0.018 * hs, 0.05 * hs, 5); g.rotateX(PI / 2 + 0.35); add(head, g, M.skin, 0, 0.11 * hs, 0.125 * hs); }   // naso
-  // capelli: calotta e parte posteriore (il davanti resta scoperto per il viso)
-  { const cap = add(head, new THREE.SphereGeometry(1, 18, 8, 0, PI * 2, 0, PI * (look.elf ? 0.36 : 0.4)), M.hair, 0, 0.13 * hs, -0.004); cap.scale.set(0.116 * hs, 0.138 * hs, 0.126 * hs);
-    const back = add(head, new THREE.SphereGeometry(1, 18, 10, PI / 2 + 0.95, PI * 2 - 1.9, 0, PI * 0.72), M.hair, 0, 0.13 * hs, -0.006); back.scale.set(0.116 * hs, 0.14 * hs, 0.128 * hs); }
+  const HS = [0.1 * hs, 0.128 * hs, 0.118 * hs], hy = 0.125 * hs;
+  const shell = (geo, mat, inflate) => { shapeHead(geo, look.elf, inflate); const m = add(head, geo, mat, 0, hy, 0.005); m.scale.set(...HS); return m; };
+  shell(new THREE.SphereGeometry(1, 36, 28), M.face, 0);                                                                     // testa modellata con il volto
+  // capelli: calotta e nuca che seguono la forma della testa (il davanti resta scoperto)
+  shell(new THREE.SphereGeometry(1, 28, 10, 0, PI * 2, 0, PI * (look.elf ? 0.36 : 0.4)), M.hair, 0.07);
+  shell(new THREE.SphereGeometry(1, 28, 14, PI / 2 + 0.95, PI * 2 - 1.9, 0, PI * 0.72), M.hair, 0.075);
+  if (look.beard) { shell(new THREE.SphereGeometry(1, 24, 10, PI / 2 - 1.2, 2.4, PI * 0.6, PI * 0.38), M.hair, 0.07);              // barba in volume
+    const mo = add(head, new THREE.SphereGeometry(1, 10, 6), M.hair, 0, hy - 0.048 * hs, 0.112 * hs); mo.scale.set(0.034 * hs, 0.009, 0.012); }   // baffi
+  if (!look.elf) for (let k = 0; k < 6; k++) { const a = k / 6 * PI * 2 + 0.3, t = add(head, new THREE.SphereGeometry(1, 8, 6), M.hair, Math.sin(a) * 0.07 * hs, hy + 0.115 * hs + (k % 2) * 0.01, Math.cos(a) * 0.07 * hs - 0.01);
+    t.scale.set(0.035 * hs, 0.022 * hs, 0.045 * hs); t.rotation.y = a; }                                                      // ciocche spettinate
+  // orecchie: conca a forma di guscio con il lobo; quelle dell'elfa sono lame a punta
+  for (const s of [-1, 1]) {
+    if (look.elf) { const g = new THREE.ConeGeometry(0.028, 0.16, 8); g.translate(0, 0.08, 0); g.scale(1, 1, 0.38);
+      const e = add(head, g, M.skin, s * 0.098 * hs, 0.115 * hs, -0.005); e.rotation.set(-0.55, s * 0.35, -s * 1.15);
+      const ig = new THREE.ConeGeometry(0.016, 0.12, 6); ig.translate(0, 0.06, 0.004); ig.scale(1, 1, 0.3); const ie = add(e, ig, charMat(new THREE.Color(skinHex).multiplyScalar(0.82).getHex()), 0, 0.015, 0.006); ie.rotation.set(0, 0, 0);
+      add(head, new THREE.TorusGeometry(0.008, 0.002, 4, 10), M.metal, s * 0.104 * hs, 0.085 * hs, 0.0);                          // orecchino
+    } else { const e = add(head, new THREE.SphereGeometry(1, 10, 8), M.skin, s * 0.104 * hs, 0.11 * hs, -0.008); e.scale.set(0.013, 0.033, 0.023); e.rotation.y = s * 0.35;
+      const ie = add(head, new THREE.SphereGeometry(1, 8, 6), charMat(new THREE.Color(skinHex).multiplyScalar(0.8).getHex()), s * 0.112 * hs, 0.112 * hs, -0.006); ie.scale.set(0.006, 0.022, 0.014); }
+  }
   if (look.elf) {
     // capelli lunghi che scendono sulla schiena, orecchie a punta, diadema
     LO(head, [{ t: 0.0, w: 0.1, h: 0.05, oy: -0.08 }, { t: 0.2, w: 0.115, h: 0.045, oy: -0.1 }, { t: 0.45, w: 0.11, h: 0.035, oy: -0.115 }, { t: 0.62, w: 0.06, h: 0.02, oy: -0.12 }], [M.hair, M.hair], { radial: 12 }, 0, 0.06, 0);
-    for (const s of [-1, 1]) { const g = new THREE.ConeGeometry(0.022, 0.15, 5); g.translate(0, 0.075, 0); const e = add(head, g, M.skin, s * 0.1 * hs, 0.12 * hs, -0.01); e.rotation.set(-0.55, 0, -s * 1.15); }
-    const ring = add(head, new THREE.TorusGeometry(0.118 * hs, 0.006, 4, 28), M.metal, 0, 0.19 * hs, 0); ring.rotation.x = PI / 2 - 0.25;
-    add(head, new THREE.OctahedronGeometry(0.014, 0), charMat(look.gem || 0x6ac8b0), 0, 0.17 * hs, 0.122 * hs);
+    for (const s of [-1, 1]) LO(head, [{ t: 0, w: 0.022, h: 0.016 }, { t: 0.14, w: 0.026, h: 0.014 }, { t: 0.3, w: 0.018, h: 0.01 }, { t: 0.36, w: 0.006, h: 0.004 }], [M.hair, M.hair], { radial: 8 }, s * 0.092 * hs, 0.17 * hs, 0.05 * hs);   // ciocche ai lati del viso
+    const ring = add(head, new THREE.TorusGeometry(0.122 * hs, 0.006, 4, 28), M.metal, 0, 0.2 * hs, 0); ring.rotation.x = PI / 2 - 0.25; ring.scale.set(1, 1.08, 1);
+    add(head, new THREE.OctahedronGeometry(0.014, 0), charMat(look.gem || 0x6ac8b0), 0, 0.182 * hs, 0.128 * hs);
   } else {
-    for (const s of [-1, 1]) add(head, new THREE.SphereGeometry(0.022, 6, 5), M.skin, s * 0.108, 0.12, 0.0).scale.set(0.6, 1.2, 0.9);
     if (look.hat === 'cappuccio') { const h = add(head, new THREE.SphereGeometry(1, 16, 10, PI / 2 + 0.75, PI * 2 - 1.5, 0, PI * 0.75), DS(M.cloak), 0, 0.13, -0.01); h.scale.set(0.15, 0.17, 0.155); }
     if (look.hat === 'cappello') { add(head, new THREE.CylinderGeometry(0.24, 0.25, 0.022, 16), M.leather, 0, 0.255, 0); add(head, new THREE.CylinderGeometry(0.105, 0.13, 0.12, 12), M.leather, 0, 0.32, 0); }
   }
