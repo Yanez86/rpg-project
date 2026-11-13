@@ -71,6 +71,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre" |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
+| `controls/thirdPerson.js` | `thirdPerson({canvas, actor, walk, run, collide, stick, knob, actions})` | muovi un personaggio in terza persona; clip automatiche `fermo`/`cammina`/`corre`, azioni da tasto (es. E → `saluta`) |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 
 Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine/demo/main.js`) mostra l'ordine completo.
@@ -81,7 +82,7 @@ I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un serv
 
 ## Prova dei personaggi
 
-`engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago con un abitante accanto per la scala.
+`engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
 
 ## Test
 

@@ -43,6 +43,7 @@ export { createPost } from './render/post.js';
 export { createNightLights } from './render/nightLights.js';
 
 export { firstPerson } from './controls/firstPerson.js';
+export { thirdPerson } from './controls/thirdPerson.js';
 
 export { joint, piece, charMat, charTex, makeClip, animator } from './characters/puppet.js';
 export { villager, villagerClips } from './characters/villager.js';
