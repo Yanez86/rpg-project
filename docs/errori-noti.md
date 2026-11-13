@@ -29,3 +29,5 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 ## Texture dei personaggi
 - `CanvasTexture` di default ha `ClampToEdgeWrapping`: se le UV vanno oltre 1 (texture ripetuta sul loft) si vede solo l'ultimo pixel stirato e la superficie sembra un colore piatto. Impostare `wrapS = wrapT = RepeatWrapping` (e le mipmap per le texture grandi viste da lontano).
 - Le texture si possono controllare senza browser: eseguire in Node le funzioni dei pixel e salvarle come PNG (così le ha controllate chi ha scritto questa nota).
+- **Commenti che inghiottono codice**: un commento `//` aggiunto alla fine di una riga "spinge" dentro il commento tutto ciò che segue sulla stessa riga. È successo con la membrana del drago (`position` mai creata → errore `a.array`). Commenti sempre su una riga propria o alla fine di un'istruzione completa.
+- La prova di fumo ora usa geometrie e attributi "veri a metà" (`test/three-stub.mjs`): un attributo mai creato o una geometria vuota fanno fallire il test come nel browser.

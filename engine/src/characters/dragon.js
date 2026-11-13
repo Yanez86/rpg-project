@@ -166,7 +166,8 @@ export function dragon() {
     wings.push({ sh, fa, hand, tips, back });
   }
   const mem = new THREE.Mesh(new THREE.BufferGeometry(), HM.mem);
-  const NV = 2 * 33;   // 11 triangoli per ala mem.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
+  const NV = 2 * 33;   // 11 triangoli per ala
+  mem.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
   { // UV fisse a ventaglio: u = distanza dal polso (0) alla punta (1), v = quale dito (0..1)
     const uvs = [], U = (u, v) => uvs.push(u, v);
     for (let w = 0; w < 2; w++) {
