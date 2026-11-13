@@ -86,3 +86,4 @@ export const LatheGeometry=PrimGeo;
 export const ExtrudeGeometry=PrimGeo;
 export const ShapeGeometry=PrimGeo;
 export const OctahedronGeometry=PrimGeo;
+export const MeshToonMaterial=P2('MeshToonMaterial');

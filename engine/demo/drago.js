@@ -6,7 +6,7 @@ import {
   E, initContext, rnd, R, PI, createTextures, bake, P, tm, uvS,
   house, bench, tree, flowerBed, wallLantern, createTerrain, distantCliffs, puddle,
   smokeAndFog, createRain, createSky, updateSwing, setupAtmosphere, createPost, createNightLights,
-  setParticleScale, villager, dragon, thirdPerson, TEX, wear, mute,
+  setParticleScale, villager, dragon, thirdPerson, setToon, TEX, wear, mute,
 } from '../src/index.js';
 
 const err = document.getElementById('err');
@@ -36,7 +36,8 @@ bake(world);
 /* ---------- il drago e un abitante per la scala ---------- */
 const D = { r: 11, speed: 2.1, ang: 0, home: [0, 0, -1.5], face: 0.25 };
 let drago = null;
-function spawnDragon() { const prev = drago && drago.anim.current(); if (drago) scene.remove(drago.root); drago = dragon(); scene.add(drago.root); drago.anim.play(prev || 'fermo', 0); drago.root.position.set(...D.home); drago.root.rotation.y = D.face; }
+let toonOn = false; const keyL = new THREE.DirectionalLight(0xfff0dc, 0.0); keyL.position.set(6, 12, 8); scene.add(keyL);
+function spawnDragon() { const prev = drago && drago.anim.current(); if (drago) scene.remove(drago.root); drago = dragon(); scene.add(drago.root); drago.anim.play(prev || 'fermo', 0); drago.root.position.set(...D.home); drago.root.rotation.y = D.face; if (toonOn) setToon(drago.root, true); }
 spawnDragon();
 const person = villager(); person.root.position.set(4.2, 0, 9); person.root.rotation.y = PI + 0.4; scene.add(person.root); person.anim.play('fermo', 0);
 // il drago è un ostacolo che si sposta: non gli si passa attraverso
@@ -46,6 +47,7 @@ const collide = p => {
     for (const k of [-2.6, 0, 2.6]) { const cx = r.position.x + f.x * k, cz = r.position.z + f.z * k, dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz), m = 2.1; if (d < m && d > 1e-4) { p.x = cx + dx / d * m; p.z = cz + dz / d * m; } } }
   const R0 = Math.hypot(p.x, p.z); if (R0 > 60) { p.x *= 60 / R0; p.z *= 60 / R0; }
 };
+{ const b = document.getElementById('toon'); b.addEventListener('click', () => { toonOn = !toonOn; b.setAttribute('aria-pressed', String(toonOn)); setToon(drago.root, toonOn); setToon(person.root, toonOn); keyL.intensity = toonOn ? 0.9 : 0; }); }
 const player = thirdPerson({ canvas, actor: person, collide, stick: document.getElementById('stick'), knob: document.getElementById('knob'), dist: 7.5, pitch: 0.32, actions: { KeyE: 'saluta' } });
 for (const b of document.querySelectorAll('[data-clip]')) b.addEventListener('click', () => {
   if (b.dataset.clip === 'nuovo') { spawnDragon(); return; }
