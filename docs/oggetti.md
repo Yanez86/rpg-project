@@ -105,7 +105,14 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 - Scala: testa a circa 8,7 m (cinque volte l'abitante), corpo lungo circa 7 m, apertura alare circa 17 m.
 - Giunti: `corpo`, `collo0…collo5`, `testa`, `mascella`, `coda0…coda9`, `zampaAS/AD/PS/PD`, `gambaAS/AD/PS/PD`, `piedeAS/AD/PS/PD`, `alaS/D`, `avambraccioS/D`, `manoS/D`, `ditoS1…4` e `ditoD1…4`.
 - **Forme organiche con il loft** (`characters/loft.js`): ogni pezzo è una sezione ellittica che scorre lungo un asse cambiando larghezza e altezza, con un rigonfiamento a metà per i muscoli. Niente parallelepipedi: corpo con fianchi, ventre e petto; anelli di collo e coda affusolati che si sovrappongono; cosce muscolose; testa con cranio e muso in un solo pezzo.
-- Scaglie embricate in pixel-art sopra, placche del ventre sotto (secondo gruppo di materiale del loft).
+- **Pelle dipinta a colori** (64×64, a colori pieni, non grigio tinto):
+  - scaglie embricate a ventaglio, ogni fila copre la successiva; luce in alto e ombra in basso, carena centrale, riflesso iridescente sul bordo alto (oro sul cremisi, verde acqua sul bronzo, viola sull'ardesia, rosso sul nero), contorno netto, ombra portata sulla fila sotto;
+  - ogni scaglia ha la sua tinta; qualcuna è scheggiata o segnata da un graffio (cicatrici);
+  - la texture è dimensionata in metri (`tile: [1.6, 1.6]` nel loft): le scaglie hanno la stessa misura su corpo, collo, coda e zampe (circa 20 cm);
+  - **disegno ampio con i colori per vertice**: dorso più scuro, fianchi, chiaro verso il ventre (controombreggiatura), bande scure sul dorso, macchie;
+  - ventre a placche larghe con solco scuro e bordo lucido; corna con anelli di crescita ondulati e punta chiara;
+  - membrana delle ali con UV a ventaglio: ossa delle dita, venature che si diramano verso il bordo, chiazze traslucide, bordo scuro.
+- **Attenzione**: le texture ripetute (`uRep`/`vRep` > 1) devono avere `RepeatWrapping`, altrimenti si allunga l'ultimo pixel e la pelle sembra piatta.
 - Cresta dorsale di spine dalla testa alla punta della coda; coda che si assottiglia e finisce a losanga.
 - Testa con cranio e muso affusolato, arcate sopraccigliari, occhi ambra a mandorla con palpebra, narici, zanne più lunghe davanti, lingua, due paia di corna ricurve in quattro segmenti, frangia di spine sulle guance.
 - Zampe in tre segmenti (quelle posteriori digitigrade), piede con tre dita in avanti e uno sperone dietro, ognuno col suo artiglio ricurvo; muscoli di spalle e cosce attaccati al corpo.

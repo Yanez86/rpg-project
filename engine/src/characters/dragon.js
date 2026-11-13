@@ -9,36 +9,83 @@ import { joint, piece, charMat, charTex, makeClip, animator } from './puppet.js'
 import { loft, taper } from './loft.js';
 import { mute } from '../materials/palette.js';
 
-const HIDES = [ // [scaglie, ventre, membrana, corna]
-  [0x6a2420, 0xa88a5a, 0x4a1a18, 0xd8ccb0],   // cremisi
-  [0x3e4a2e, 0xa89a62, 0x2e3422, 0xc8bc98],   // verde bronzo
-  [0x2e3a48, 0x8a9098, 0x222a36, 0xd0d0c8],   // ardesia
-  [0x262422, 0x8a6a4a, 0x1c1a1a, 0xb8a888],   // nero
+const HIDES = [ // scaglie, ventre, membrana, corna, riflesso (iridescenza sui bordi delle scaglie)
+  { name: 'cremisi', sc: [122, 34, 30], be: [176, 140, 92], mem: [92, 30, 26], horn: [216, 204, 176], glint: [214, 150, 60] },
+  { name: 'verde bronzo', sc: [58, 78, 44], be: [170, 154, 98], mem: [52, 60, 34], horn: [200, 188, 152], glint: [96, 168, 140] },
+  { name: 'ardesia', sc: [46, 58, 76], be: [140, 146, 154], mem: [38, 44, 60], horn: [208, 208, 200], glint: [140, 110, 190] },
+  { name: 'nero', sc: [38, 34, 34], be: [138, 106, 74], mem: [30, 26, 26], horn: [184, 168, 136], glint: [150, 40, 36] },
 ];
 const FINGERS = [[0.12, 5.2], [0.5, 4.8], [0.92, 4.2], [1.35, 3.4]];   // [angolo indietro, lunghezza]
-let TX = null;
-function textures() {
-  if (TX) return TX;
-  TX = {
-    // scaglie embricate: celle di 4 px sfalsate, bordo chiaro in alto e arco scuro in basso
-    scales: charTex(16, 16, (u, v) => { const row = v >> 2, cu = (u + (row & 1) * 2) & 3, cv = v & 3; let b = 175 + hn((u + (row & 1) * 2) >> 2, row, 330) * 50;
-      if (cv === 3 || (cv === 2 && (cu === 0 || cu === 3))) b *= 0.55; else if (cv === 0) b *= 1.18; return [b, b, b]; }),
-    // placche del ventre: fasce orizzontali
-    belly: charTex(16, 16, (u, v) => { let b = 200 + hn(u >> 1, v, 331) * 30; if (v % 4 === 3) b *= 0.6; if (v % 4 === 0) b *= 1.1; return [b, b, b]; }),
-    horn: charTex(8, 16, (u, v) => { const b = 190 + (v % 3 === 0 ? -40 : 0) + hn(u, v, 332) * 30; return [b, b, b]; }),
+const mixc = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), mul = (a, k) => a.map(v => v * k);
+const texCache = {};
+/**
+ * Pelle dipinta a colori, pixel per pixel (64×64):
+ *  - scaglie embricate a ventaglio: ogni fila copre la metà alta della successiva, bordo superiore in luce,
+ *    ombra portata sulla fila sotto, carena centrale, riflesso iridescente sul bordo;
+ *  - ogni scaglia ha la sua tinta; alcune sono scheggiate o rigate (cicatrici).
+ */
+function hideTextures(H) {
+  if (texCache[H.name]) return texCache[H.name];
+  const W = 64, RW = 16, RH = 11, rad = 9.6, hi = mixc(H.sc, [255, 236, 190], 0.4), lo = mixc(H.sc, [16, 14, 36], 0.6);
+  const scales = charTex(W, W, (x, y) => {
+    let owner = null;
+    for (let r = Math.floor(y / RH) + 1; r >= Math.floor(y / RH) - 1 && !owner; r--) {
+      const off = (r & 1) * RW / 2; for (const c of [-1, 0, 1, 2]) { const col = Math.floor((x - off) / RW) + c, cx = col * RW + off + RW / 2, cy = r * RH;
+        const dx = x + 0.5 - cx, dy = y + 0.5 - cy; if (dx * dx / (rad * rad * 0.7) + dy * dy / (rad * rad) <= 1 && dy <= 0.55 * rad) { owner = { col, r, dx, dy }; break; } }
+    }
+    if (!owner) return mul(lo, 0.7);
+    const { col, r, dx, dy } = owner, id = hn(((col % 4) + 4) % 4, ((r % 6) + 6) % 6, 340);
+    const d = Math.sqrt(dx * dx / (rad * rad * 0.7) + dy * dy / (rad * rad)), top = Math.max(0, Math.min(1, (dy + rad) / (1.55 * rad)));
+    let c = mixc(H.sc, id < 0.5 ? hi : lo, Math.abs(id - 0.5) * 0.45);                        // tinta propria della scaglia
+    c = mixc(mixc(c, hi, 0.45), mul(c, 0.62), top);                                            // luce in alto, ombra verso il basso
+    if (Math.abs(dx) < 1.0 && dy < 0.25 * rad) c = mixc(c, hi, 0.3);                            // carena centrale
+    if (d > 0.74 && dy < 0.2 * rad) c = mixc(c, H.glint, 0.55 * (d - 0.74) / 0.26);             // riflesso iridescente sul bordo alto
+    if (d > 0.92) c = mul(lo, 0.85);                                                            // contorno netto
+    if (dy > 0.3 * rad) c = mul(c, 0.6);                                                        // ombra portata sulla fila sotto
+    if (id > 0.95 && d < 0.6 && hn(x >> 1, y >> 1, 341) < 0.35) c = mul(c, 0.7);                            // scaglia scheggiata
+    if (id < 0.08 && Math.abs(dx * 0.8 + dy * 0.6) < 0.7 && d < 0.8) c = mixc(c, [235, 225, 205], 0.5);   // graffio (cicatrice)
+    return c.map(v => v * (0.95 + hn(x, y, 342) * 0.08));
+  });
+  // ventre: placche larghe e leggermente arcuate, solco scuro, bordo lucido, rughe sottili
+  const belly = charTex(32, 32, (x, y) => { const yy = y, k = yy % 8, row = yy >> 3;
+    let c = mul(H.be, (0.88 + hn(row, 0, 343) * 0.16 - k * 0.025) * (0.94 + 0.08 * Math.sin((x + 0.5) / 32 * Math.PI * 2) ));
+    if (k === 7) c = mul(c, 0.42); else if (k === 6) c = mul(c, 0.7); else if (k <= 1) c = mixc(c, [255, 245, 220], 0.3 - k * 0.12);
+    if (k > 2 && k < 6 && hn(x, row, 344) < 0.1) c = mul(c, 0.85); return c.map(v => v * (0.96 + hn(x, y, 345) * 0.06)); });
+  // corna: anelli di crescita ondulati e striature lungo la lunghezza, punta più chiara
+  const horn = charTex(16, 32, (x, y) => { let c = mixc(mul(H.horn, 0.55), H.horn, y / 31); const ring = (y + Math.round(Math.sin(x * 0.8) * 0.8)) % 5;
+    if (ring === 0) c = mul(c, 0.7); else if (ring === 1) c = mixc(c, [255, 250, 235], 0.15); if (hn(x, 0, 346) < 0.3) c = mul(c, 0.9); return c.map(v => v * (0.96 + hn(x, y, 347) * 0.06)); });
+  // membrana: ossa delle dita, venature che si diramano verso il bordo, chiazze traslucide, bordo scuro
+  const mem = charTex(64, 64, (x, y) => { const u = (x + 0.5) / 64, v = (y + 0.5) / 64;
+    let c = mixc(H.mem, mixc(H.mem, [255, 196, 150], 0.3), Math.pow(u, 1.3) * 0.9);
+    c = mul(c, 0.92 + 0.12 * Math.sin(u * 9 + Math.sin(v * 23) * 1.5) * Math.sin(v * 31));
+    const fv = (v * 4) % 1, panel = Math.floor(v * 4);
+    if (Math.min(fv, 1 - fv) < 0.018 + 0.015 * (1 - u)) return mul(H.mem, 0.55);
+    for (let j = 0; j < 3; j++) { const vc = (panel + 0.25 + 0.25 * j + 0.06 * u * u * (j - 1) + 0.025 * Math.sin(u * 7 + j * 2)) / 4, th = (0.012 - 0.007 * u);
+      if (u > 0.08 && Math.abs(v - vc) < th) c = mul(c, 0.62);
+      const br = vc + 0.03 * (u - 0.55) * 4 * (j % 2 ? 1 : -1); if (u > 0.55 && Math.abs(v - br) < 0.006) c = mul(c, 0.75); }
+    if (u > 0.94) c = mul(c, 0.55); if (hn(x, y, 348) < 0.002 && u > 0.7) c = mul(c, 0.3);
+    return c; });
+  for (const t of [scales, belly, mem]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true; }
+  return texCache[H.name] = { scales, belly, horn, mem };
+}
+function hideMats(H) {
+  const T = hideTextures(H), vc = (map, side) => new THREE.MeshLambertMaterial({ map, vertexColors: true, side: side || THREE.FrontSide });
+  return {
+    sc: vc(T.scales), be: vc(T.belly), dark: new THREE.MeshLambertMaterial({ map: T.scales, color: 0x7a7470 }),
+    horn: new THREE.MeshLambertMaterial({ map: T.horn }), mem: new THREE.MeshLambertMaterial({ map: T.mem, side: THREE.DoubleSide }),
   };
-  return TX;
 }
 
 /** crea un drago. Restituisce { root, anim, update() } — update() va chiamato dopo anim.update(dt) (membrana delle ali) */
 export function dragon() {
-  const tx = textures(), [cS, cB, cM, cH] = pick(HIDES);
-  const M = {
-    sc: charMat(cS, tx.scales), be: charMat(cB, tx.belly), horn: charMat(cH, tx.horn), claw: charMat(0x2a2622), tooth: charMat(0xe8e0cc), tongue: charMat(0x7a2a2a),
-    dark: charMat(new THREE.Color(cS).multiplyScalar(0.6).getHex(), tx.scales), eye: new THREE.MeshBasicMaterial({ color: 0xffb040 }),
-  };
+  const H = pick(HIDES), HM = hideMats(H);
+  const M = { sc: HM.sc, be: HM.be, dark: HM.dark, horn: HM.horn, claw: charMat(0x2a2622), tooth: charMat(0xe8e0cc), tongue: charMat(0x7a2a2a), eye: new THREE.MeshBasicMaterial({ color: 0xffb040 }) };
   const SB = [M.sc, M.be], NOB = { belly: [2, 2] };
-  const LO = (parent, sections, opts, mats, x, y, z) => { const m = new THREE.Mesh(loft(sections, opts), mats || SB); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+  // disegno ampio della pelle (colori per vertice): dorso più scuro, fianchi, chiaro verso il ventre, bande scure a "V" sul dorso, macchie
+  const skin = (t, a) => { const dors = Math.cos(a * PI * 2), k = 0.78 + 0.32 * (1 - (dors + 1) / 2);
+    const band = dors > 0.35 && Math.sin(t * 2.4 + Math.abs(Math.sin(a * PI * 2)) * 2.2) > 0.55 ? 0.68 : 1, spot = hn(Math.round(t * 3), Math.round(a * 16), 350) < 0.06 ? 0.8 : 1;
+    const v = k * band * spot; return [v, v * 0.98, v * 0.96]; };
+  const LO = (parent, sections, opts, mats, x, y, z) => { opts = Object.assign({ color: skin, tile: [1.6, 1.6] }, opts); delete opts.vRep; delete opts.uRep; const m = new THREE.Mesh(loft(sections, opts), mats || SB); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
   const root = new THREE.Group(); root.name = 'drago';
   const corpo = joint(root, 'corpo', 0, 3.7, 0);
   // corpo: fianchi stretti, ventre, petto profondo, spalle che salgono verso il collo
@@ -118,8 +165,16 @@ export function dragon() {
     const back = joint(corpo, '', s * 0.95, 0.75, -1.9);
     wings.push({ sh, fa, hand, tips, back });
   }
-  const mem = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ color: mute(cM), side: THREE.DoubleSide }));
-  const NV = 2 * 3 * 13; mem.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3)); mem.castShadow = true; mem.receiveShadow = true; mem.frustumCulled = false;
+  const mem = new THREE.Mesh(new THREE.BufferGeometry(), HM.mem);
+  const NV = 2 * 33;   // 11 triangoli per ala mem.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
+  { // UV fisse a ventaglio: u = distanza dal polso (0) alla punta (1), v = quale dito (0..1)
+    const uvs = [], U = (u, v) => uvs.push(u, v);
+    for (let w = 0; w < 2; w++) {
+      for (let i = 0; i < 3; i++) { const v0 = i / 4, v1 = (i + 1) / 4, vm = (v0 + v1) / 2; U(0, v0); U(1, v0); U(0.8, vm); U(0, v1); U(0.8, vm); U(1, v1); }
+      U(0, 0.75); U(1, 0.75); U(0.75, 0.87); U(0, 0.9); U(0.75, 0.87); U(1, 1);
+      U(0, 0.95); U(1, 1); U(0.35, 1); U(0.35, 1); U(1, 1); U(0.6, 1); U(0.6, 1); U(0.35, 1); U(0, 0.98);
+    }
+    mem.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); } mem.castShadow = true; mem.receiveShadow = true; mem.frustumCulled = false;
   root.add(mem);
   const tmp = new THREE.Vector3(), P = n => { n.getWorldPosition(tmp); return root.worldToLocal(tmp.clone()); };
   function update() {

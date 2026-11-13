@@ -25,3 +25,7 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 - I moduli non si caricano da `file://`: serve un server HTTP. `three` arriva dall'import map (`three@0.128.0/build/three.module.js`); l'import map deve precedere ogni `<script type="module">`.
 - Nelle pagine pubblicate come artifact claude.ai la query string non arriva alla pagina: per le varianti (es. notte) usare l'hash (`#notte`).
 - Un modulo non deve creare materiali o texture al caricamento (top-level): `createTextures()` e il contesto non esistono ancora. Crearli in modo pigro al primo uso (vedi `lanternMats()`, `flowerGeometry()`, `leafMat()`).
+
+## Texture dei personaggi
+- `CanvasTexture` di default ha `ClampToEdgeWrapping`: se le UV vanno oltre 1 (texture ripetuta sul loft) si vede solo l'ultimo pixel stirato e la superficie sembra un colore piatto. Impostare `wrapS = wrapT = RepeatWrapping` (e le mipmap per le texture grandi viste da lontano).
+- Le texture si possono controllare senza browser: eseguire in Node le funzioni dei pixel e salvarle come PNG (così le ha controllate chi ha scritto questa nota).
