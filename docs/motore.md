@@ -66,6 +66,9 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `render/lighting.js` | `setupAtmosphere()` | nebbia e luci per `E.mood` |
 | `render/post.js` | `createPost({pixelRatio, reflections, scanlines})` | SSAO, SSR, foschia, bloom, grading, scanlines |
 | `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
+| `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
+| `characters/villager.js` | `villager()`, `villagerClips()` | abitante: `fermo`, `cammina`, `corre`, `saluta` |
+| `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 
 Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine/demo/main.js`) mostra l'ordine completo.
@@ -74,9 +77,13 @@ Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine
 
 I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un server qualsiasi, per esempio `npx serve engine` oppure `python3 -m http.server -d engine`, e apri `/demo/`. Aggiungi `#notte` all'indirizzo per la versione notturna.
 
+## Prova dei personaggi
+
+`engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante.
+
 ## Test
 
-`cd engine && npm test` esegue la demo in Node con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
+`cd engine && npm test` esegue la demo in Node (aggiungi `personaggi.js` per la pagina dei personaggi) con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
 Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, import ed export sbagliati), non errori degli shader.
 
 ## Cosa non è ancora un modulo

@@ -82,3 +82,21 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 
 ## Fumo e nebbia — `softSys`
 - **Particelle morbide a billboard** istanziate con texture fbm: fumo dei comignoli (12 per camino), 40 banchi di nebbia che derivano, nebbiolina di cascata e fontana.
+
+## Personaggi a marionetta — `characters/puppet.js`
+- Corpo fatto di **pezzi rigidi** appesi a **giunti** con nome (niente pelle che si deforma): come una marionetta.
+- Le animazioni sono **clip di keyframe** (`makeClip`) campionate da funzioni del tempo: si esportano in glTF e in Godot diventano animazioni dell'`AnimationPlayer` con lo stesso nome.
+- Materiali senza usura (l'usura è legata al mondo), texture pixel-art a colori pieni per volti e pelo.
+- Guardano verso +z, i piedi toccano y=0. Nomi di giunti e clip in italiano.
+
+## Abitante — `villager()`
+- Giunti: `anca`, `busto`, `collo`, `testa`, `mantello`, `spallaS/D`, `gomitoS/D`, `cosciaS/D`, `ginocchioS/D` (S = sinistra = +x).
+- Altezza circa 1,75 m. Tunica con gonnella, cintura con fibbia, tracolla e bisaccia, mantellina e mantello che ondeggia, pantaloni, stivali con risvolto.
+- Volto dipinto 16×16 (frangia, sopracciglia, occhi, naso, bocca, barba facoltativa), naso e orecchie in rilievo.
+- Varianti casuali: carnagione, capelli, colori di tunica, mantello e pantaloni, barba, cappuccio o cappello.
+- Clip: `fermo` (respiro, si guarda attorno), `cammina` (1 s), `corre` (0,62 s, busto in avanti, gomiti piegati), `saluta`.
+
+## Gatto — `cat()`
+- Giunti: `corpo`, `testa`, `orecchioS/D`, `zampaAS/AD/PS/PD` con `gambaAS/AD/PS/PD`, coda in 6 anelli `coda0…coda5`.
+- Pelo tigrato in pixel-art (rosso, grigio, nero con petto bianco, crema), ventre e muso chiari, occhi con pupilla a fessura, "M" sulla fronte, baffi, orecchie con l'interno rosa.
+- Clip: `fermo` (coda che ondeggia a S, orecchio che scatta), `cammina` (passo laterale: posteriore e anteriore dello stesso lato in sequenza), `trotta` (diagonali insieme), `seduto`.
