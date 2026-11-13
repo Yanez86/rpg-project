@@ -26,6 +26,13 @@ I nomi usati durante il lavoro, con una spiegazione breve. Utile per parlarne e 
 | **L-system / ramificazione ricorsiva** | rami generati da regole che si ripetono | alberi |
 | **Vertex wind** | oscillazione dei vertici nel vertex shader | foglie |
 | **Loft** (estrusione a sezioni) | solido ottenuto facendo scorrere una sezione che cambia forma lungo un percorso | corpo, collo, coda, zampe, testa del drago |
+| **Catmull-Rom** (spline) | curva che passa per tutti i punti dati e li raccorda in modo morbido | sezioni del loft nell'elfa di Blender |
+| **glTF / GLB** | formato standard dei modelli 3D (GLB = versione in un solo file binario); lo leggono three, Godot e Blender | `engine/assets/elfa.glb` |
+| **Extras** (proprietà personalizzate) | dati liberi attaccati a un oggetto in Blender che arrivano nel motore in `userData` | `noOutline` sui dettagli |
+| **Solidify** | modificatore di Blender che dà spessore a una superficie sottile | mantello, maniche, gonna, lamelle degli spallacci |
+| **Bevel** (smussatura) | modificatore di Blender che arrotonda gli spigoli | borsello |
+| **Ray casting / BVH** | si lancia un raggio contro la mesh (indicizzata in un albero di volumi) per trovare il punto della superficie | lacci, cuciture e diadema appoggiati sulla superficie |
+| **Rigid skinning** (marionetta) | ogni pezzo segue un solo giunto, senza deformarsi | tutti i personaggi; la gonna dell'elfa di Blender divisa sui giunti delle cosce |
 | **LatheGeometry** (tornitura) | solido ottenuto ruotando un profilo | lanterne |
 | **Extrude** (estrusione) | solido ottenuto spingendo una sagoma 2D | insegne, ponte |
 | **Instancing** (`InstancedMesh`) | migliaia di copie della stessa geometria in una chiamata | erba, fiori, foglie, canne |

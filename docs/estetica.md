@@ -214,4 +214,6 @@ Valgono tutte le regole sopra; qui ci sono solo le differenze per le scene al ch
 - I personaggi sono in **cel shading anime** (stile JRPG alla Atelier), sopra il mondo realistico: `setToon(root, true)` è la base.
 - Luce propria del personaggio, fissata alla camera: non si aggiungono luci alla scena per i personaggi.
 - Ombra a due toni tinta di lilla (mai nera), rim light calda, contorno sottile color inchiostro caldo.
+- **Dettagli piccoli senza contorno** (lacci, occhielli, profili, gemme, fibbie): con il contorno a spessore costante diventano macchie scure da lontano (`userData.noOutline`).
+- **Modelli fatti in Blender**: portano solo le forme e il nome dei materiali; colori, texture pixel-art e cel shading li mette il motore, come per i personaggi fatti in codice (`characters/elfa3d.js`).
 - **La camera in prima persona sta all'altezza degli occhi degli abitanti** (`eyeHeight(villager())`, circa 1,6 m), così chi gioca ha la stessa statura degli altri personaggi.

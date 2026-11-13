@@ -1,11 +1,11 @@
-// Prova dei personaggi: un abitante, un'elfa e un gatto in un angolo di piazza sotto la pioggia.
+// Prova dei personaggi: un abitante, l'elfa del motore, l'elfa modellata in Blender e un gatto in un angolo di piazza sotto la pioggia.
 // Trascina per girare attorno, rotellina o pulsanti per avvicinarti. #notte per la notte.
 import * as THREE from 'three';
 import {
   E, initContext, rnd, R, PI, createTextures, bake, P, tm, uvS,
   house, bench, tree, flowerBed, wallLantern, createTerrain, distantCliffs, puddle,
   smokeAndFog, createRain, createSky, updateSwing, setupAtmosphere, createPost, createNightLights,
-  setParticleScale, villager, elf, cat, setToon, TEX, wear, mute,
+  setParticleScale, villager, elf, cat, setToon, TEX, wear, mute, elfa3d, loadElfa3d,
 } from '../src/index.js';
 
 const err = document.getElementById('err');
@@ -43,6 +43,9 @@ const actors = {
   elfa: { make: elf, r: 3.3, speed: { cammina: 1.45, corre: 3.6 }, dir: -1, ang: PI * 0.5, home: [0.2, 0, -0.6], face: 0.05 },
   gatto: { make: cat, r: 1.6, speed: { cammina: 0.5, trotta: 1.25 }, dir: -1, ang: PI, home: [1.0, 0, 0.9], face: -0.5 },
 };
+// l'elfa modellata in Blender (engine/assets/elfa.glb): se il file non si carica la pagina va avanti senza
+try { await loadElfa3d(); actors.elfa3d = { make: elfa3d, r: 4.0, speed: { cammina: 1.45, corre: 3.6 }, dir: 1, ang: PI * 1.5, home: [1.3, 0, -0.9], face: -0.3 }; }
+catch (e) { console.warn('Elfa di Blender non caricata:', e.message); document.getElementById('row-elfa3d').hidden = true; }
 // cel shading: solo i personaggi cambiano aspetto (hanno una luce loro), la scena resta com'è
 let toonOn = true;   // cel shading: è lo stile di base dei personaggi
 function spawn(key) {
@@ -50,7 +53,7 @@ function spawn(key) {
   if (a.c) scene.remove(a.c.root);
   a.c = a.make(); scene.add(a.c.root); a.c.anim.play(prev || 'fermo', 0); if (toonOn) setToon(a.c.root, true);
 }
-spawn('abitante'); spawn('elfa'); spawn('gatto');
+spawn('abitante'); spawn('elfa'); spawn('gatto'); if (actors.elfa3d) spawn('elfa3d');
 { const b = document.getElementById('toon'); b.addEventListener('click', () => { toonOn = !toonOn; b.setAttribute('aria-pressed', String(toonOn));
   for (const a of Object.values(actors)) setToon(a.c.root, toonOn); }); }
 for (const b of document.querySelectorAll('[data-actor]')) b.addEventListener('click', () => {

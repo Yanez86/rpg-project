@@ -62,7 +62,7 @@ function outlineMat() {
     'vec4 mvPosition = modelViewMatrix * vec4( transformed, 1.0 );\nvec3 nV = normalize( normalMatrix * normal );\nmvPosition.xyz += nV * uThick * max( -mvPosition.z, 0.5 );\ngl_Position = projectionMatrix * mvPosition;'); };
   OUT.customProgramCacheKey = () => 'toon-outline'; return OUT;
 }
-/** attiva/disattiva il cel shading su un personaggio (root). opts: { outline: true } */
+/** attiva/disattiva il cel shading su un personaggio (root). opts: { outline: true }. Le mesh con userData.noOutline (dettagli piccoli) restano senza contorno */
 export function setToon(root, on, opts) {
   opts = opts || {}; const list = []; root.traverse(o => { if (o.isMesh && !o.userData.isOutline) list.push(o); });
   for (const o of list) {
@@ -70,7 +70,7 @@ export function setToon(root, on, opts) {
       if (!o.userData.mat0) o.userData.mat0 = o.material;
       o.material = Array.isArray(o.userData.mat0) ? o.userData.mat0.map(toonOf) : toonOf(o.userData.mat0);
       const first = Array.isArray(o.userData.mat0) ? o.userData.mat0[0] : o.userData.mat0;
-      if (opts.outline !== false && !first?.isMeshBasicMaterial && !first?.transparent) {
+      if (opts.outline !== false && !o.userData.noOutline && !first?.isMeshBasicMaterial && !first?.transparent) {
         if (!o.userData.ol) { const ol = new THREE.Mesh(o.geometry, outlineMat()); ol.userData.isOutline = true; ol.castShadow = false; ol.frustumCulled = false; o.add(ol); o.userData.ol = ol; }
         o.userData.ol.visible = true;
       }

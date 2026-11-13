@@ -46,7 +46,9 @@ export { firstPerson } from './controls/firstPerson.js';
 export { thirdPerson } from './controls/thirdPerson.js';
 
 export { joint, piece, charMat, charTex, makeClip, animator } from './characters/puppet.js';
-export { villager, elf, villagerClips } from './characters/villager.js';
+export { villager, elf, elfLook, humanMats, villagerClips } from './characters/villager.js';
+export { elfa3d, loadElfa3d, setElfa3d, elfa3dReady, ELFA3D_URL, ELFA3D_MATERIALS } from './characters/elfa3d.js';
+export { parseGlb } from './core/glb.js';
 export { loft, taper } from './characters/loft.js';
 export { cat, catClips } from './characters/cat.js';
 export { dragon, dragonClips } from './characters/dragon.js';

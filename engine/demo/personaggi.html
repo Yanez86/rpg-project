@@ -66,7 +66,7 @@ button.act[aria-pressed="true"]::before { background: var(--gold); }
 </head>
 <body>
 
-<canvas id="scene" aria-label="Un abitante del borgo, un'elfa e un gatto in un angolo di piazza sotto la pioggia, animati"></canvas>
+<canvas id="scene" aria-label="Un abitante del borgo, due elfe (quella del motore e quella modellata in Blender) e un gatto in un angolo di piazza sotto la pioggia, animati"></canvas>
 <div class="hud" id="hud" hidden>
 <div class="plate panel">
   <span class="eyebrow">rpg-project · personaggi a marionetta</span>
@@ -93,6 +93,12 @@ button.act[aria-pressed="true"]::before { background: var(--gold); }
     <button class="act" type="button" data-actor="elfa" data-clip="corre" aria-pressed="false">Corre</button>
     <button class="act" type="button" data-actor="elfa" data-clip="saluta" aria-pressed="false">Saluta</button>
     <button class="act" type="button" data-actor="elfa" data-clip="nuovo">Un'altra</button></div>
+  <div class="row panel" id="row-elfa3d"><span class="who">Elfa · Blender</span>
+    <button class="act" type="button" data-actor="elfa3d" data-clip="fermo" aria-pressed="true">Ferma</button>
+    <button class="act" type="button" data-actor="elfa3d" data-clip="cammina" aria-pressed="false">Cammina</button>
+    <button class="act" type="button" data-actor="elfa3d" data-clip="corre" aria-pressed="false">Corre</button>
+    <button class="act" type="button" data-actor="elfa3d" data-clip="saluta" aria-pressed="false">Saluta</button>
+    <button class="act" type="button" data-actor="elfa3d" data-clip="nuovo">Un'altra</button></div>
   <div class="row panel"><span class="who">Gatto</span>
     <button class="act" type="button" data-actor="gatto" data-clip="fermo" aria-pressed="true">Fermo</button>
     <button class="act" type="button" data-actor="gatto" data-clip="cammina" aria-pressed="false">Cammina</button>

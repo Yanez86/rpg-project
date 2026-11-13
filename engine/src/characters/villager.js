@@ -124,14 +124,24 @@ const ELF = {
   skirt: 0.5, flare: 1.38, neck: 0.05, head: 0.94, armW: 0.8, legW: 0.86, bust: 1,
 };
 
-function humanoid(S, look) {
+/**
+ * Materiali di un umanoide dal suo aspetto (look): li usano anche i modelli fatti in Blender (characters/elfa3d.js).
+ * face: opzionale, una texture del volto al posto di quella standard 64×32.
+ */
+export function humanMats(look, face) {
   const tx = textures(), skinHex = new THREE.Color(look.skin[0] / 255, look.skin[1] / 255, look.skin[2] / 255).getHex();
-  const M = {
+  return {
     top: charMat(look.top, look.fine ? tx.fine : tx.cloth), skirt: charMat(look.skirt ?? look.top, look.fine ? tx.fine : tx.cloth), cloak: charMat(look.cloak, tx.cloth),
     trous: charMat(look.trous, tx.cloth), leather: charMat(look.boots ?? 0x4a3424, tx.leather), belt: charMat(0x2e2218, tx.leather),
     metal: charMat(look.metal ?? 0xb08a48), skin: charMat(skinHex), hair: charMat(look.hair, tx.hair), trim: charMat(look.trim ?? 0x2e2218, look.trim ? tx.fine : tx.leather),
-    face: charMat(0xffffff, faceTex({ skin: look.skin, hair: look.hair, eye: look.eye || [70, 60, 50], beard: look.beard, elf: look.elf }), 'face' + rnd()),
+    face: charMat(0xffffff, face || faceTex({ skin: look.skin, hair: look.hair, eye: look.eye || [70, 60, 50], beard: look.beard, elf: look.elf }), 'face' + rnd()),
+    skinShade: charMat(new THREE.Color(skinHex).multiplyScalar(look.elf ? 0.82 : 0.8).getHex()), gem: charMat(look.gem || 0x6ac8b0),
   };
+}
+
+function humanoid(S, look) {
+  const skinHex = new THREE.Color(look.skin[0] / 255, look.skin[1] / 255, look.skin[2] / 255).getHex();
+  const M = humanMats(look);
   const DS = m => { const c = m.clone(); c.side = THREE.DoubleSide; return c; };
   const add = (p, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true; p.add(m); return m; };
   const LO = (p, secs, mats, opts, x, y, z) => add(p, loft(secs, Object.assign({ axis: 'y', belly: [2, 2], radial: 12 }, opts)), mats, x, y, z);
@@ -239,14 +249,18 @@ export function villager() {
   });
 }
 /** elfa: più alta (circa 1,9 m) e snella, capelli lunghi, orecchie a punta, diadema, abito lungo. Restituisce { root, anim } */
-export function elf() {
+export function elf() { return humanoid(ELF, elfLook()); }
+/** aspetto casuale dell'elfa (una delle quattro palette, carnagione, capelli, occhi): lo usa anche elfa3d() */
+export function elfLook() {
   const pal = pick([[0x3e5a46, 0x2e4436, 0x6ac8b0], [0xd8d0b8, 0x3a4a3a, 0x7ab0e0], [0x4a3e5a, 0x2e2a40, 0xc890e0], [0x6a3a30, 0x3a2a28, 0xe0b060]]);
-  return humanoid(ELF, {
+  return {
     elf: true, fine: true, skin: pick([[236, 214, 196], [214, 184, 156], [150, 110, 86], [244, 226, 212]]), hair: pick([0xe8dcb0, 0xc8c8c4, 0x8a3a20, 0x1e1a1a, 0xd8b070]),
     eye: pick([[90, 150, 90], [110, 90, 170], [70, 130, 170], [170, 130, 60]]), top: pal[0], skirt: pal[0], cloak: pal[1], gem: pal[2],
     trous: 0x3a3430, boots: 0x5a4632, metal: 0xc8c8c0, trim: 0xc8a050, capeLen: 1.15,
-  });
+  };
 }
+/** misure dell'elfa (anca, gambe, busto…): le stesse del modello di Blender (engine/tools/blender/elfa.py) */
+export const ELF_SIZE = ELF;
 
 const TAU = PI * 2, cp = (x, k) => Math.pow(Math.max(0, x), k || 1);
 /** le quattro clip degli umanoidi; opts: { hip: altezza dell'anca, stride, arm } */

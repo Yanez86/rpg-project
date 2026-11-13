@@ -67,7 +67,9 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `render/post.js` | `createPost({pixelRatio, reflections, scanlines})` | SSAO, SSR, foschia, bloom, grading, scanlines |
 | `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
 | `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
-| `characters/villager.js` | `villager()`, `elf()`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta` |
+| `characters/villager.js` | `villager()`, `elf()`, `elfLook()`, `humanMats(look, face)`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta`; aspetto e materiali riusabili dai modelli di Blender |
+| `characters/elfa3d.js` | `loadElfa3d(url)`, `setElfa3d(buffer)`, `elfa3d()`, `ELFA3D_MATERIALS` | l'elfa modellata in Blender (`engine/assets/elfa.glb`): stessi giunti e clip di `elf()`, più dettaglio |
+| `core/glb.js` | `parseGlb(buffer)` | lettore minimo di `.glb`: nodi, mesh, uv, nomi dei materiali (`userData.mat`) e proprietà di Blender (`userData`) |
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
 | `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
@@ -84,7 +86,20 @@ I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un serv
 
 ## Prova dei personaggi
 
-`engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
+`engine/demo/personaggi.html`: un abitante, l'elfa del motore, l'elfa modellata in Blender e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
+
+## Modelli fatti in Blender
+
+Blender si comanda con script Python: lo script costruisce il modello e lo esporta in `.glb` (glTF binario), il motore lo legge con `parseGlb()`.
+
+- Script: `engine/tools/blender/` (oggi `elfa.py`). Il modello finisce in `engine/assets/`.
+- Rigenerare, con Blender come modulo Python (`pip install bpy`, serve Python 3.13 per bpy 5.x):
+  `python engine/tools/blender/elfa.py --out engine/assets/elfa.glb`
+- Oppure con Blender installato (su macOS: Blender.app):
+  `/Applications/Blender.app/Contents/MacOS/Blender --background --python engine/tools/blender/elfa.py -- --out engine/assets/elfa.glb`
+  Aggiungi `--blend elfa.blend` per salvare anche il file da aprire in Blender.
+- Regole: si scrive in coordinate three (x destra, y su, z avanti) e si converte in quelle di Blender solo quando si crea la mesh; un personaggio a marionetta ha i giunti come oggetti vuoti con i nomi del motore e nessuna rotazione a riposo; i materiali hanno solo un nome, colori e texture li mette il modulo del motore; i dettagli piccoli vanno in un oggetto con la proprietà `noOutline`.
+- Il modello si carica con `fetch`, quindi la pagina va servita via HTTP. In Node (test) si legge il file e si passa a `setElfa3d(buffer)`.
 
 ## Anteprime senza browser
 
@@ -92,7 +107,7 @@ I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un serv
 
 ## Test
 
-`cd engine && npm test` esegue la demo in Node (aggiungi `personaggi.js` per la pagina dei personaggi) con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
+`cd engine && npm test` esegue prima `test/elfa3d.mjs` (giunti, piedi a terra, altezza e materiali del modello di Blender, poi `elfa3d()` con il finto three) e poi la demo in Node (aggiungi `personaggi.js` per la pagina dei personaggi) con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
 Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, import ed export sbagliati), non errori degli shader.
 
 ## Cosa non è ancora un modulo

@@ -4,6 +4,6 @@
   "type": "module",
   "description": "Motore grafico di rpg-project con l'estetica di Valfiorita",
   "scripts": {
-    "test": "node --import ./test/register.mjs test/smoke.mjs"
+    "test": "node --import ./test/register.mjs test/elfa3d.mjs && node --import ./test/register.mjs test/smoke.mjs"
   }
 }
