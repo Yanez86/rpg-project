@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Guardaroba dell'elfa</title>
+<title>Guardaroba dei personaggi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+24&family=Pixelify+Sans:wght@400;600&display=swap">
@@ -67,15 +67,18 @@ button.act[aria-pressed="true"]::before { background: var(--gold); }
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"}}</script>
 </head>
 <body>
-<canvas id="scene" aria-label="L'elfa modellata in Blender su una pedana: si vestono e si tolgono i capi uno per uno, dal corpo base all'abito completo"></canvas>
+<canvas id="scene" aria-label="Un personaggio modellato in Blender (l'elfa o wuxia) su una pedana: si vestono e si tolgono i capi uno per uno, dal corpo base all'abito completo"></canvas>
 <div class="hud" id="hud">
 <div class="plate panel">
   <span class="eyebrow">rpg-project · corpo base e capi</span>
-  <h1>Guardaroba dell'elfa</h1>
+  <h1>Guardaroba</h1>
   <p class="keys">Trascina per girare attorno · rotellina o +/− per avvicinarti</p>
 </div>
 <div class="zoom"><button class="act" id="zin" type="button" aria-label="Avvicina">+</button><button class="act" id="zout" type="button" aria-label="Allontana">−</button></div>
 <div class="wardrobe" id="wardrobe">
+  <div class="row panel"><span class="who">Chi</span>
+    <button class="act" type="button" data-modello="elfa" aria-pressed="true">Elfa</button>
+    <button class="act" type="button" data-modello="wuxia" aria-pressed="false">Wuxia</button></div>
   <div class="row panel"><span class="who">Vesti</span>
     <button class="act" type="button" data-preset="corpo">Solo il corpo</button>
     <button class="act" type="button" data-preset="intimo">Intimo</button>

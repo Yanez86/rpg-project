@@ -1,12 +1,12 @@
 // Elfa modellata in Blender: la stessa elfa di villager.js con più dettaglio (pieghe dell'abito, corsetto con le stecche
 // e i lacci veri, spallacci a tre lamelle bordate, maniche a campana con l'orlo che scende dietro, bracciali allacciati,
 // mani con le dita accennate, stivali con il risvolto a punta, diadema che scende sulla fronte, orecchie a foglia).
-// Il modello viene da engine/tools/blender/elfa.py → engine/assets/elfa.glb. Pilastri che non cambiano:
+// Il modello viene da engine/tools/blender/personaggi.py --modello elfa → engine/assets/elfa.glb. Pilastri che non cambiano:
 //  - marionetta a pezzi rigidi con gli stessi giunti dell'elfa del motore: le clip di villagerClips() vanno senza modifiche;
 //  - il file porta solo forme e NOMI dei materiali; colori (quattro palette), texture pixel-art e cel shading li mette
 //    questo modulo con gli stessi materiali dell'elfa (humanMats), quindi setToon() funziona come per gli altri.
 // Uso:  await loadElfa3d();  const e = elfa3d();  scene.add(e.root); e.anim.play('cammina'); setToon(e.root, true)
-import { parseGlb } from '../core/glb.js';
+import { vesti, scegliVisibili, pezziDi, nodoModello } from './guardaroba.js';
 import { hn } from '../core/rng.js';
 import { animator, charTex } from './puppet.js';
 import { elfLook, humanMats, villagerClips, ELF_SIZE } from './villager.js';
@@ -22,10 +22,8 @@ export async function loadElfa3d(url) {
   return setElfa3d(await r.arrayBuffer());
 }
 /** usa un .glb già letto (ArrayBuffer), per esempio in Node */
-export function setElfa3d(buffer) {
-  const g = parseGlb(buffer); TPL = g.getObjectByName('elfa');
-  if (!TPL) throw new Error('setElfa3d: nel file manca il nodo "elfa"'); return TPL;
-}
+export function setElfa3d(buffer) { TPL = nodoModello(buffer, 'elfa'); return TPL; }
+export { vesti, scegliVisibili };
 export const elfa3dReady = () => !!TPL;
 
 /**
@@ -59,47 +57,13 @@ function faceTexHD(f) {
   });
 }
 
-/** nomi dei materiali che il modello può usare (quelli di engine/tools/blender/elfa.py) */
+/** nomi dei materiali che il modello può usare (quelli di engine/tools/blender/personaggi.py --modello elfa) */
 export const ELFA3D_MATERIALS = ['abito', 'gonna', 'mantello', 'calze', 'cuoio', 'cintura', 'metallo', 'bordo', 'pelle', 'pelle_ombra', 'capelli', 'volto', 'gemma', 'lino'];
 
-/*
- * Guardaroba. Ogni oggetto del modello ha in userData (dalle proprietà di Blender):
- *   strato: corpo | intimo | abiti | accessori | capelli;  pezzo: il capo ("corpo" per il corpo);
- *   regione: la parte del corpo che occupa (busto, braccio, bacino, coscia, gamba, piede…), sul corpo e sull'intimo;
- *   nasconde: regioni che il capo copre del tutto (separate da virgole): negli strati più bassi si nascondono;
- *   richiede: il capo su cui il pezzo si appoggia (senza quello non si vede).
- */
-const LIVELLO = { corpo: 0, intimo: 1, abiti: 2, accessori: 3, capelli: 3 };
-/**
- * Quali oggetti si vedono con certi capi addosso. tags: array di userData; pezzi: i capi indossati.
- * Il corpo si vede sempre, tranne le regioni coperte da un capo di uno strato più alto. Funzione pura (si prova senza three).
- */
-export function scegliVisibili(tags, pezzi) {
-  const su = new Set(pezzi), ok = t => su.has(t.pezzo) && (!t.richiede || su.has(t.richiede)), coperte = [];
-  for (const t of tags) if (t.nasconde && t.strato !== 'corpo' && ok(t)) for (const r of t.nasconde.split(',')) coperte.push([r, LIVELLO[t.strato]]);
-  return tags.map(t => {
-    if (!t.strato) return true;
-    if (t.strato !== 'corpo' && !ok(t)) return false;
-    return !(t.regione && coperte.some(([r, l]) => r === t.regione && l > LIVELLO[t.strato]));
-  });
-}
 /** i capi del modello, per strato: { intimo: [...], abiti: [...], accessori: [...], capelli: [...] } */
-export function pezziElfa3d() {
-  if (!TPL) return {};
-  const out = {};
-  TPL.traverse(o => { const u = o.userData; if (u.strato && u.strato !== 'corpo') { const l = out[u.strato] = out[u.strato] || []; if (!l.includes(u.pezzo)) l.push(u.pezzo); } });
-  return out;
-}
+export const pezziElfa3d = () => pezziDi(TPL);
 /** tutti i capi: l'elfa vestita come prima della scomposizione */
 export const tuttiIPezzi = () => Object.values(pezziElfa3d()).flat();
-/** veste un'elfa (o la spoglia): pezzi = elenco dei capi indossati. Restituisce l'attore, con attore.pezzi aggiornato */
-export function vesti(actor, pezzi) {
-  const list = [];
-  actor.root.traverse(o => { if (o.isMesh && o.userData.strato) list.push(o); });
-  const vis = scegliVisibili(list.map(o => o.userData), pezzi);
-  list.forEach((o, i) => { o.visible = vis[i]; });
-  actor.pezzi = [...pezzi]; return actor;
-}
 
 /**
  * Un'elfa con aspetto casuale (palette, carnagione, capelli, occhi). Restituisce { root, anim, pezzi } come elf().

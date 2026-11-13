@@ -136,7 +136,7 @@ export function humanMats(look, face) {
     metal: charMat(look.metal ?? 0xb08a48), skin: charMat(skinHex), hair: charMat(look.hair, tx.hair), trim: charMat(look.trim ?? 0x2e2218, look.trim ? tx.fine : tx.leather),
     face: charMat(0xffffff, face || faceTex({ skin: look.skin, hair: look.hair, eye: look.eye || [70, 60, 50], beard: look.beard, elf: look.elf }), 'face' + rnd()),
     skinShade: charMat(new THREE.Color(skinHex).multiplyScalar(look.elf ? 0.82 : 0.8).getHex()), gem: charMat(look.gem || 0x6ac8b0),
-    linen: charMat(look.linen ?? 0xd6cab0, look.fine ? tx.fine : tx.cloth),
+    linen: charMat(look.linen ?? 0xd6cab0, look.fine ? tx.fine : tx.cloth), silk: charMat(look.silk ?? 0xa82a2a, tx.fine), petal: charMat(look.petal ?? 0xf2ead8),
   };
 }
 
@@ -260,7 +260,7 @@ export function elfLook() {
     trous: 0x3a3430, boots: 0x5a4632, metal: 0xc8c8c0, trim: 0xc8a050, capeLen: 1.15,
   };
 }
-/** misure dell'elfa (anca, gambe, busto…): le stesse del modello di Blender (engine/tools/blender/elfa.py) */
+/** misure dell'elfa (anca, gambe, busto…): le stesse del modello di Blender (engine/tools/blender/personaggi.py) */
 export const ELF_SIZE = ELF;
 
 const TAU = PI * 2, cp = (x, k) => Math.pow(Math.max(0, x), k || 1);

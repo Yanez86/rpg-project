@@ -17,9 +17,9 @@ Motore e grafica di un gioco di ruolo fantasy con l'estetica di **Valfiorita sot
 | `reference/valfiorita-pioggia.html` | Scena di riferimento, giorno di pioggia (stile definitivo) |
 | `reference/valfiorita-notte.html` | Variante notturna (luci delle case, pozze di luce, coni e aloni) |
 | `scene/locanda.html` | **Locanda del Boccale**: interno su due piani (sala con camino e lampadario, bancone, cucina, ballatoio, camera con il letto) a luci soffuse |
-| `engine/tools/blender/` | Script di Blender (Python) che modellano i personaggi: `elfa.py` → `engine/assets/elfa.glb` (vedi `docs/motore.md` › Modelli fatti in Blender) |
+| `engine/tools/blender/` | Script di Blender (Python) che modella i personaggi: `personaggi.py --modello elfa|wuxia` → `engine/assets/elfa.glb`, `wuxia.glb` (vedi `docs/motore.md` › Modelli fatti in Blender) |
 | `engine/assets/` | Modelli esportati da Blender (`.glb`) |
-| `engine/demo/guardaroba.html` | Guardaroba dell'elfa: corpo base, intimo, abiti e accessori da mettere e togliere uno per uno |
+| `engine/demo/guardaroba.html` | Guardaroba dei personaggi di Blender (l'elfa e wuxia): corpo base, intimo, abiti e accessori da mettere e togliere uno per uno |
 | `tools/anteprima.js` | Fotografa una scena con Chromium senza GPU, per vedere il render anche senza rete (vedi `docs/errori-noti.md`) |
 | `reference/build/` | Script con cui sono state generate le scene (vedi il README lì) |
 | `.claude/skills/scena-estetica/` | Skill per Claude: applica queste regole quando si creano scene o oggetti |

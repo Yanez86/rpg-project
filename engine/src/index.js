@@ -47,7 +47,9 @@ export { thirdPerson } from './controls/thirdPerson.js';
 
 export { joint, piece, charMat, charTex, makeClip, animator } from './characters/puppet.js';
 export { villager, elf, elfLook, humanMats, villagerClips } from './characters/villager.js';
-export { elfa3d, loadElfa3d, setElfa3d, elfa3dReady, ELFA3D_URL, ELFA3D_MATERIALS, vesti, scegliVisibili, pezziElfa3d, tuttiIPezzi } from './characters/elfa3d.js';
+export { elfa3d, loadElfa3d, setElfa3d, elfa3dReady, ELFA3D_URL, ELFA3D_MATERIALS, pezziElfa3d, tuttiIPezzi } from './characters/elfa3d.js';
+export { wuxia3d, loadWuxia3d, setWuxia3d, wuxia3dReady, WUXIA3D_URL, WUXIA3D_MATERIALS, pezziWuxia3d, tuttiIPezziWuxia, wuxiaLook } from './characters/wuxia3d.js';
+export { vesti, scegliVisibili, pezziDi, caricaModello, nodoModello } from './characters/guardaroba.js';
 export { parseGlb } from './core/glb.js';
 export { loft, taper } from './characters/loft.js';
 export { cat, catClips } from './characters/cat.js';

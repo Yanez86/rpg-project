@@ -1,8 +1,9 @@
-// Guardaroba dell'elfa: il corpo base modellato in Blender e i capi che si mettono e si tolgono uno per uno.
+// Guardaroba dei personaggi modellati in Blender (l'elfa e wuxia): il corpo base e i capi che si mettono e si tolgono uno per uno.
 // I pulsanti dei capi vengono dal modello (userData.strato / pezzo), quindi un capo nuovo aggiunto in Blender compare da solo.
 // Trascina per girare attorno, rotellina o +/− per avvicinarti.
 import * as THREE from 'three';
-import { E, initContext, setupAtmosphere, createTextures, setToon, loadElfa3d, elfa3d, vesti, pezziElfa3d, tuttiIPezzi, PI } from '../src/index.js';
+import { E, initContext, setupAtmosphere, createTextures, setToon, loadElfa3d, elfa3d, pezziElfa3d, tuttiIPezzi,
+  loadWuxia3d, wuxia3d, pezziWuxia3d, tuttiIPezziWuxia, vesti } from '../src/index.js';
 
 const err = document.getElementById('err');
 const fail = m => { err.hidden = false; err.textContent = m; };
@@ -19,24 +20,33 @@ setupAtmosphere(); createTextures(); scene.fog = null;
   const g = new THREE.CylinderGeometry(0.9, 0.95, 0.08, 40); const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0x4a3a2c })); m.position.y = -0.04; scene.add(m); }
 
 const NOMI = { intimo: 'Intimo', abiti: 'Abiti', accessori: 'Accessori', capelli: 'Capelli' };
-let actor = null, worn = [], clip = 'fermo';
-try { await loadElfa3d(); }
-catch (e) { fail('Il modello dell\'elfa non si carica (' + e.message + '). Apri la pagina da un server: vedi docs/motore.md.'); }
+const MODELLI = {
+  elfa: { titolo: 'Elfa', carica: loadElfa3d, crea: elfa3d, pezzi: pezziElfa3d, tutti: tuttiIPezzi },
+  wuxia: { titolo: 'Wuxia', carica: loadWuxia3d, crea: wuxia3d, pezzi: pezziWuxia3d, tutti: tuttiIPezziWuxia },
+};
+let modello = /wuxia/.test(location.hash + location.search) ? 'wuxia' : 'elfa', actor = null, worn = [], clip = 'fermo', buttons = {};
+const pronti = {};
+for (const [k, m] of Object.entries(MODELLI)) {
+  try { await m.carica(); pronti[k] = true; } catch (e) { console.warn('Modello non caricato: ' + k, e.message); }
+}
+if (!Object.keys(pronti).length) fail('I modelli non si caricano. Apri la pagina da un server: vedi docs/motore.md.');
+if (!pronti[modello]) modello = Object.keys(pronti)[0] || modello;
 
-const pezzi = pezziElfa3d(), buttons = {};
+const box = document.getElementById('wardrobe');
 function aggiorna() {
   if (actor) vesti(actor, worn);
   for (const [p, b] of Object.entries(buttons)) b.setAttribute('aria-pressed', String(worn.includes(p)));
 }
 function nuova() {
-  if (!actor && !Object.keys(pezzi).length) return;
+  if (!pronti[modello]) return;
   if (actor) scene.remove(actor.root);
-  actor = elfa3d({ vesti: worn }); scene.add(actor.root); setToon(actor.root, true); actor.anim.play(clip, 0);
+  actor = MODELLI[modello].crea({ vesti: worn }); scene.add(actor.root); setToon(actor.root, true); actor.anim.play(clip, 0);
 }
-{ // una riga di pulsanti per strato, letti dal modello
-  const box = document.getElementById('wardrobe');
-  for (const [strato, lista] of Object.entries(pezzi)) {
-    const row = document.createElement('div'); row.className = 'row panel';
+function righeCapi() {                                  // una riga di pulsanti per strato, letti dal modello
+  for (const r of document.querySelectorAll('.capi')) r.remove();
+  buttons = {};
+  for (const [strato, lista] of Object.entries(pronti[modello] ? MODELLI[modello].pezzi() : {})) {
+    const row = document.createElement('div'); row.className = 'row panel capi';
     const who = document.createElement('span'); who.className = 'who'; who.textContent = NOMI[strato] || strato; row.appendChild(who);
     for (const p of lista) {
       const b = document.createElement('button'); b.className = 'act'; b.type = 'button'; b.textContent = p.replace('_', ' ');
@@ -46,14 +56,23 @@ function nuova() {
     box.appendChild(row);
   }
 }
-const PRESET = { corpo: () => [], intimo: () => [...(pezzi.intimo || []).filter(p => p !== 'calze'), ...(pezzi.capelli || [])], tutto: () => tuttiIPezzi() };
+const PRESET = {
+  corpo: () => [],
+  intimo: () => { const P = MODELLI[modello].pezzi(); return [...(P.intimo || []).filter(p => p !== 'calze'), ...(P.capelli || [])]; },
+  tutto: () => MODELLI[modello].tutti(),
+};
+function scegli(k) {
+  modello = k; worn = PRESET.tutto(); righeCapi(); nuova(); aggiorna();
+  for (const b of document.querySelectorAll('[data-modello]')) b.setAttribute('aria-pressed', String(b.dataset.modello === k));
+}
+for (const b of document.querySelectorAll('[data-modello]')) b.addEventListener('click', () => scegli(b.dataset.modello));
 for (const b of document.querySelectorAll('[data-preset]')) b.addEventListener('click', () => { worn = PRESET[b.dataset.preset](); aggiorna(); });
 document.getElementById('nuova').addEventListener('click', () => { nuova(); aggiorna(); });
 for (const b of document.querySelectorAll('[data-clip]')) b.addEventListener('click', () => {
   clip = b.dataset.clip; if (actor) actor.anim.play(clip);
   for (const o of document.querySelectorAll('[data-clip]')) o.setAttribute('aria-pressed', String(o === b));
 });
-worn = PRESET.tutto(); nuova(); aggiorna();
+scegli(modello);
 
 /* ---------- camera che gira attorno ---------- */
 let yaw = 0.4, pitch = 0.12, dist = 4.2, dragId = null, lx = 0, ly = 0;
