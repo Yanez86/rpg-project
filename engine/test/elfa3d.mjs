@@ -1,7 +1,8 @@
 // Prova dell'elfa modellata in Blender (engine/assets/elfa.glb, da engine/tools/blender/elfa.py) e di characters/elfa3d.js.
 // Controlla i pilastri che il modello deve tenere uguali all'elfa del motore:
-//  1. ci sono tutti i giunti, con lo stesso genitore, nella stessa posizione e senza rotazioni né scale (le clip funzionano uguali);
-//  2. in posa di riposo i piedi toccano y = 0 e l'altezza è quella dell'elfa del motore (1,84 m in cima ai capelli);
+//  1. ci sono tutti i giunti, con lo stesso genitore, nella posizione data dalle misure del modello e senza rotazioni né scale
+//     (le clip funzionano uguali);
+//  2. in posa di riposo i piedi toccano y = 0 e l'altezza è quella di un'elfa (1,80-1,95 m in cima ai capelli);
 //  3. ogni materiale del file ha il suo materiale nel motore;
 //  4. guardaroba: ogni oggetto ha strato e pezzo, il corpo ha tutte le regioni, i capi coprono regioni che esistono,
 //     e vestendo o spogliando si vede la cosa giusta (scegliVisibili);
@@ -22,9 +23,10 @@ const byName = {}, parent = {};
 json.nodes.forEach((n, i) => { byName[n.name] = n; for (const c of n.children || []) parent[json.nodes[c].name] = n.name; });
 
 // 1. giunti
-const S = ELF_SIZE, cx = (0.088 + 0.02 * S.bust) * S.W;
+// le misure stanno nel modello (userData.misure del nodo "elfa", scritte dallo script di Blender); senza, quelle di elf()
+const S = { shoulderDrop: 0.035, ...((byName.elfa.extras || {}).misure || ELF_SIZE) }, cx = (0.088 + 0.02 * (S.bust ?? 1)) * S.W;
 const J = { anca: ['elfa', 0, S.hip, 0], busto: ['anca', 0, 0.05, 0], mantello: ['busto', 0, S.torso, -0.04], collo: ['busto', 0, S.torso - 0.005, 0], testa: ['collo', 0, S.neck, 0] };
-for (const [L, s] of [['S', 1], ['D', -1]]) Object.assign(J, { ['spalla' + L]: ['busto', s * S.shoulder, S.torso - 0.035, 0], ['gomito' + L]: ['spalla' + L, 0, -S.upper, 0],
+for (const [L, s] of [['S', 1], ['D', -1]]) Object.assign(J, { ['spalla' + L]: ['busto', s * S.shoulder, S.torso - S.shoulderDrop, 0], ['gomito' + L]: ['spalla' + L, 0, -S.upper, 0],
   ['coscia' + L]: ['anca', s * cx, -0.06, 0], ['ginocchio' + L]: ['coscia' + L, 0, -S.thigh, 0] });
 for (const [name, [par, x, y, z]] of Object.entries(J)) {
   const n = byName[name]; if (!n) fail('manca il giunto ' + name);
@@ -40,7 +42,7 @@ let lo = Infinity, hi = -Infinity;
 for (const n of json.nodes) if (n.mesh !== undefined) for (const pr of json.meshes[n.mesh].primitives) {
   const a = json.accessors[pr.attributes.POSITION], w = world(n.name); lo = Math.min(lo, w[1] + a.min[1]); hi = Math.max(hi, w[1] + a.max[1]); }
 if (Math.abs(lo) > 0.01) fail('i piedi devono toccare y = 0, il punto più basso è a ' + lo.toFixed(3));
-if (Math.abs(hi - 1.842) > 0.03) fail('altezza fuori misura: ' + hi.toFixed(3) + ' m (l\'elfa del motore è alta 1,842 m)');
+if (hi < 1.8 || hi > 1.95) fail('altezza fuori misura: ' + hi.toFixed(3) + ' m (l\'elfa è alta circa 1,85-1,9 m)');
 
 // 3. materiali
 for (const m of json.materials) if (!ELFA3D_MATERIALS.includes(m.name)) fail('materiale senza corrispondenza nel motore: ' + m.name);

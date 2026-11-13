@@ -112,6 +112,7 @@ export function elfa3d(opts) {
     bordo: M.trim, pelle: M.skin, pelle_ombra: M.skinShade, capelli: M.hair, volto: M.face, gemma: M.gem, lino: M.linen };
   const root = TPL.clone(true);
   root.traverse(o => { if (o.isMesh) { o.material = mats[o.userData.mat] || M.top; o.castShadow = true; o.receiveShadow = true; } });
-  const actor = { root, anim: animator(root, villagerClips({ hip: ELF_SIZE.hip, stride: 1.08, arm: 0.75 })) };
+  const misure = TPL.userData.misure || ELF_SIZE;                                  // le misure scritte dallo script di Blender
+  const actor = { root, anim: animator(root, villagerClips({ hip: misure.hip, stride: 1.08, arm: 0.75 })), misure };
   return vesti(actor, (opts && opts.vesti) || tuttiIPezzi());
 }

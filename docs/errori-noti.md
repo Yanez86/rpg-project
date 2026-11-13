@@ -67,3 +67,6 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 - **Accessori che galleggiano**: un pezzo appoggiato su un altro capo (borsello sulla cintura, spilla sul colletto, diadema sui capelli) resta sospeso nel vuoto se quel capo si toglie. Dichiararlo con `richiede`.
 - **Cima delle cosce piatta**: il tappo piatto della coscia fa un gradino sui fianchi del corpo nudo. Fare la cima a cupola e il bacino un po' più stretto delle cosce, così sono loro a disegnare i fianchi.
 - **Bacino più largo delle cosce**: sporge e sembra un pannolone; con l'intimo sopra peggiora.
+- **Allungare un pezzo scalandolo in altezza** (busto più corto, braccia più lunghe) deforma anche ciò che sta sopra: spallacci schiacciati, mani allungate. Escludere quei pezzi o spostarli invece di scalarli (`scala_y` e la mano in `elfa.py`).
+- **Linee appoggiate con un raggio che non trovano più la superficie**: se la forma si stringe (spalle più strette), i punti di un profilo che partivano fuori dal busto non colpiscono nulla e la linea si accorcia senza errori. Ricontrollare i punti di partenza quando cambiano le misure.
+- **Spalle da manichino**: un busto che si stringe di colpo sotto il collo fa un gradino piatto con lo spigolo. Far scendere le sezioni piano dal braccio al collo (trapezio) e tenere bassa la cupola del braccio, che continua la stessa linea.

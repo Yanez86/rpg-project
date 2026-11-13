@@ -37,9 +37,24 @@ def sm(a, b, x):
 def tb(p): return (p[0], -p[2], p[1])                       # three → Blender
 def V(*a): return Vector(a)
 
-# misure: le stesse di ELF in villager.js
-S = dict(hip=1.0, thigh=0.47, shin=0.37, W=0.84, chest=0.172, waist=0.11, hips=0.21, torso=0.5, shoulder=0.2, upper=0.3,
-         fore=0.27, skirt=0.5, flare=1.38, neck=0.05, head=0.94, armW=0.8, legW=0.86)
+# misure: partono da ELF di villager.js, con le gambe più lunghe e il busto più corto (richiesta dell'autore):
+# coscia 0,47 → 0,50, gamba 0,37 → 0,40, anca 1,00 → 1,06, busto 0,50 → 0,46. Finiscono nel modello (userData.misure del nodo
+# "elfa"), così il motore e la prova di fumo usano le stesse.
+# Confronto con una foto di riferimento (modella in piedi, di fronte, di tre quarti e di schiena), in frazioni dell'altezza:
+# ginocchio, vita, bacino e seno erano già giusti; spalle più strette (da 0,20 a 0,165 dal centro) e più basse, collo più lungo
+# (0,05 → 0,07), braccia più lunghe (0,30 → 0,34 e 0,27 → 0,32: il gomito arriva alla vita, le dita a metà coscia),
+# vita meno stretta (0,11 → 0,125) e cassa toracica un po' più stretta (0,172 → 0,16).
+S = dict(hip=1.06, thigh=0.5, shin=0.4, W=0.84, chest=0.16, waist=0.125, hips=0.21, torso=0.46, shoulder=0.165, shoulderDrop=0.05, upper=0.34,
+         fore=0.32, skirt=0.5, flare=1.38, neck=0.07, head=0.94, armW=0.8, legW=0.86, bust=1)
+# il busto si disegna alto T0 = 0,5, il braccio lungo 0,30 e l'avambraccio 0,27 (le misure dei pezzi sono pensate così):
+# build() li allunga o accorcia in altezza (KT, KU, KF); gli spallacci restano come sono
+T0 = 0.5; KT = S['torso'] / T0; KU = S['upper'] / 0.3; KF = S['fore'] / 0.27
+def scala_y(joint_name, name):
+    if joint_name == 'busto': return KT
+    if 'spallacc' in name: return 1.0
+    if joint_name.startswith('spalla'): return KU
+    if joint_name.startswith('gomito'): return KF
+    return 1.0
 W, hs, aw, lw = S['W'], S['head'], S['armW'], S['legW']
 
 # ---------------------------------------------------------------- scena, materiali, giunti
@@ -69,7 +84,7 @@ def joint(name, parent, pos):
     if parent: o.parent = J[parent]
     o.location = tb(pos); J[name] = o; return o
 
-joint('elfa', None, (0, 0, 0))
+joint('elfa', None, (0, 0, 0)); J['elfa']['misure'] = {k: float(v) for k, v in S.items()}
 joint('anca', 'elfa', (0, S['hip'], 0))
 joint('busto', 'anca', (0, 0.05, 0))
 joint('mantello', 'busto', (0, S['torso'], -0.04))
@@ -77,7 +92,7 @@ joint('collo', 'busto', (0, S['torso'] - 0.005, 0))
 joint('testa', 'collo', (0, S['neck'], 0))
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
-    joint('spalla' + L, 'busto', (s * S['shoulder'], S['torso'] - 0.035, 0))
+    joint('spalla' + L, 'busto', (s * S['shoulder'], S['torso'] - S['shoulderDrop'], 0))
     joint('gomito' + L, 'spalla' + L, (0, -S['upper'], 0))
     joint('coscia' + L, 'anca', (s * (0.088 + 0.02) * W, -0.06, 0))
     joint('ginocchio' + L, 'coscia' + L, (0, -S['thigh'], 0))
@@ -248,7 +263,9 @@ def probe(bvh, origin, direction, off=0.0):
 
 # ---------------------------------------------------------------- oggetti di Blender
 def build(name, joint_name, g, mods=(), sharp=None, extras=None, tags=None):
-    me = bpy.data.meshes.new(name); me.from_pydata([tb(p) for p in g.v], [], g.f)
+    ky = scala_y(joint_name, name); vs = [(p[0], p[1] * ky, p[2]) for p in g.v] if ky != 1.0 else g.v   # busto più corto, braccia più lunghe
+    if ky != 1.0 and name.endswith('_mano'): vs = [(p[0], p[1] - (ky - 1) * 0.262, p[2]) for p in g.v]   # la mano non si allunga: scende con il polso
+    me = bpy.data.meshes.new(name); me.from_pydata([tb(p) for p in vs], [], g.f)
     uvl = me.uv_layers.new(name='UVMap')
     for p in me.polygons:
         for k, li in enumerate(p.loop_indices): uvl.data[li].uv = g.uv[p.index][k]
@@ -431,14 +448,12 @@ torso_secs = [
     dict(t=-0.24, w=ch * 0.97, h=0.116 * W, oy=0.008, bumps=bp(0.15)), dict(t=-0.28, w=ch, h=0.12 * W, oy=0.012, bumps=bp(0.75)),
     dict(t=-0.315, w=ch * 1.02, h=0.124 * W, oy=0.016, bumps=bp(1)), dict(t=-0.35, w=ch * 1.03, h=0.126 * W, oy=0.018, bumps=bp(0.8)),
     dict(t=-0.39, w=ch * 1.03, h=0.122 * W, oy=0.012, bumps=bp(0.35)),
-    dict(t=-S['torso'] * 0.86, w=ch + 0.024 * W, h=0.112 * W, oy=-0.004), dict(t=-S['torso'] * 0.95, w=ch + 0.022 * W, h=0.1 * W, oy=-0.008),
-    dict(t=-S['torso'] * 0.995, w=ch * 0.74, h=0.085 * W, oy=-0.01), dict(t=-S['torso'] - 0.012, w=0.085 * W, h=0.07 * W, oy=-0.008),
-    dict(t=-S['torso'] - 0.02, w=0.055, h=0.05)]
-corpo()                                             # il busto nudo ha le sezioni dell'abito 4 mm più dentro, ma le spalle arrivano alle braccia
+    dict(t=-0.425, w=0.13, h=0.1, oy=-0.004),                                                 # sotto le ascelle
+    # spalle morbide e basse: dal braccio al collo la linea scende piano (trapezio), più piena dietro; il collo resta lungo
+    dict(t=-0.445, w=0.132, h=0.092, oy=-0.008), dict(t=-0.462, w=0.118, h=0.084, oy=-0.011), dict(t=-0.478, w=0.095, h=0.074, oy=-0.012),
+    dict(t=-0.492, w=0.072, h=0.062, oy=-0.01), dict(t=-0.505, w=0.056, h=0.05, oy=-0.008), dict(t=-0.512, w=0.048, h=0.044, oy=-0.006)]
+corpo()                                             # il busto nudo ha le sezioni dell'abito 4 mm più dentro
 body_secs = shrink(torso_secs, 0.004)
-for b_ in body_secs:
-    if abs(b_['t'] + S['torso'] * 0.86) < 1e-6: b_['w'] += 0.014
-    if abs(b_['t'] + S['torso'] * 0.95) < 1e-6: b_['w'] += 0.024; b_['h'] += 0.004
 build('busto_corpo', 'busto', loft(body_secs, N=40, step=0.024, mat='pelle'), extras={'regione': 'busto'})
 pezzo('intimo', 'fascia')                           # fascia di lino sul petto
 build('busto_fascia', 'busto', loft(shrink([s for s in torso_secs if -0.4 <= s['t'] <= -0.23], 0.0015), N=40, step=0.02, caps=(False, False), mat='lino'), extras={'regione': 'busto'})
@@ -451,7 +466,7 @@ for s in (1, -1):                                   # corpetto: doppio profilo r
     for inset in (0.0, 0.009):
         line = []
         for k in range(18):
-            f = k / 17; q = probe(TB, (s * (0.112 * (1 - f) ** 1.15 + 0.003 - inset * (1 - f)), 0.478 - 0.232 * f - inset * 0.6 * (1 - f), 0.4), (0, 0, -1), 0.0016)
+            f = k / 17; q = probe(TB, (s * (0.088 * (1 - f) ** 1.15 + 0.003 - inset * (1 - f)), 0.458 - 0.212 * f - inset * 0.6 * (1 - f), 0.4), (0, 0, -1), 0.0016)
             if q: line.append(tuple(q))
         D('busto').add(tube(line, 0.0015, 4, False, 'bordo'))
 
@@ -562,18 +577,18 @@ for sd in (-1, 1):                                   # passanti: strisce di cuoi
 
 # ================================================================= COLLETTO (abito), SPILLA, MANTELLO
 pezzo('abiti', 'abito', **ABITO)
-col = Part().add(loft([dict(t=-S['torso'] + 0.006, w=0.072, h=0.068), dict(t=-S['torso'] - 0.02, w=0.061, h=0.058), dict(t=-S['torso'] - 0.048, w=0.064, h=0.061)], N=32, step=0.012, caps=(True, False), mat='abito'))
-D('busto').add(tube([(0.0648 * sin(a / 32 * TAU), S['torso'] + 0.048, 0.0618 * cos(a / 32 * TAU)) for a in range(32)], 0.0022, 4, True, 'bordo'))
+col = Part().add(loft([dict(t=-T0 + 0.006, w=0.072, h=0.068), dict(t=-T0 - 0.02, w=0.061, h=0.058), dict(t=-T0 - 0.048, w=0.064, h=0.061)], N=32, step=0.012, caps=(True, False), mat='abito'))
+D('busto').add(tube([(0.0648 * sin(a / 32 * TAU), T0 + 0.048, 0.0618 * cos(a / 32 * TAU)) for a in range(32)], 0.0022, 4, True, 'bordo'))
 build('busto_colletto', 'busto', col)
 pezzo('accessori', 'spilla', richiede='abito')     # spilla con la gemma sul davanti del colletto
-cq = probe(col.bvh(), (0, S['torso'] + 0.024, 0.4), (0, 0, -1), 0.003)
+cq = probe(col.bvh(), (0, T0 + 0.024, 0.4), (0, 0, -1), 0.003)
 D('busto').add(tube([tuple(cq + Vector((0.0072 * cos(a / 12 * TAU), 0.0085 * sin(a / 12 * TAU), 0))) for a in range(12)], 0.0019, 5, True, 'metallo'))
 D('busto').add(gem(tuple(cq + Vector((0, 0, 0.0018))), (0.0052, 0.0066, 0.0038)))
 
 pezzo('abiti', 'mantello')
 def cape_pt(u, s):
     th = (0.55 + 0.9 * u) * PI; L = 1.15
-    rx = 0.13 + 0.085 * sm(0, 0.13, s) + 0.07 * s; rz = 0.1 + 0.05 * sm(0, 0.13, s) + 0.05 * s
+    rx = 0.11 + 0.07 * sm(0, 0.13, s) + 0.08 * s; rz = 0.1 + 0.05 * sm(0, 0.13, s) + 0.05 * s     # spalle più strette
     k = 1 + 0.11 * s ** 1.2 * sin(TAU * 3.5 * u + 0.6 * sin(TAU * 1.5 * u)) * sm(0.0, 0.08, u) * sm(1.0, 0.92, u)
     y = -s * L - 0.065 * s ** 8 * tri(u * 5) ** 1.5                                  # orlo a cinque punte
     return (rx * sin(th) * k, y, rz * cos(th) * k)
@@ -604,7 +619,8 @@ for u, sd in ((0.0, 1), (1.0, -1)):                 # fermagli d'argento in cima
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
     # braccio: la spalla tonda fa parte dello stesso pezzo (niente sfera appoggiata)
-    arm_secs = [dict(t=-0.047, w=0.012, h=0.012), dict(t=-0.04, w=0.04 * aw, h=0.042 * aw), dict(t=-0.02, w=0.06 * aw, h=0.062 * aw), dict(t=0.02, w=0.06 * aw, h=0.064 * aw, oy=0.003),
+    arm_secs = [dict(t=-0.018, w=0.014, h=0.014), dict(t=-0.01, w=0.044 * aw, h=0.046 * aw), dict(t=0.004, w=0.06 * aw, h=0.062 * aw),   # cupola bassa: continua la linea della spalla
+                 dict(t=0.02, w=0.06 * aw, h=0.064 * aw, oy=0.003),
                 dict(t=0.1, w=0.056 * aw, h=0.066 * aw, oy=0.008), dict(t=S['upper'] * 0.8, w=0.05 * aw, h=0.054 * aw), dict(t=S['upper'] + 0.02, w=0.047 * aw, h=0.05 * aw)]
     corpo()
     build('spalla' + L + '_corpo', 'spalla' + L, loft(shrink(arm_secs, 0.004), N=24, step=0.025, mat='pelle'), extras={'regione': 'braccio'})
@@ -671,14 +687,14 @@ for s in (1, -1):
     build('gomito' + L + '_bracciale', 'gomito' + L, br)
 
 # ================================================================= GAMBE: cosce, gambe e piedi nudi, calze, stivali
-fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -0.47 - fy        # centro del piede e suolo rispetto al ginocchio
+fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -(S['hip'] - 0.06 - S['thigh']) - fy   # centro del piede e suolo rispetto al ginocchio
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
     thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw, h=0.064 * lw), dict(t=-0.05, w=(0.074 + 0.012) * lw, h=0.08 * lw),   # cima a cupola: niente gradino sui fianchi
                   dict(t=0.1, w=(0.074 + 0.006) * lw, h=0.084 * lw, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw, h=0.07 * lw, oy=0.006),
                   dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
     shin_secs = [dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
-                 dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw), dict(t=0.33, w=0.031, h=0.035, oy=-0.004), dict(t=S['shin'] + 0.022, w=0.029, h=0.033, oy=-0.004)]
+                 dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw), dict(t=S['shin'] * 0.89, w=0.031, h=0.035, oy=-0.004), dict(t=S['shin'] + 0.022, w=0.029, h=0.033, oy=-0.004)]
     corpo()
     build('coscia' + L + '_corpo', 'coscia' + L, loft(shrink(thigh_secs, 0.003), N=24, step=0.03, mat='pelle'), extras={'regione': 'coscia'})
     build('ginocchio' + L + '_corpo', 'ginocchio' + L, loft(shrink(shin_secs, 0.003), N=24, step=0.025, mat='pelle'), extras={'regione': 'gamba'})
@@ -702,7 +718,7 @@ for s in (1, -1):
     pezzo('abiti', 'stivali', nasconde=('gamba', 'piede'))
     sh = Part()
     boot = loft([dict(t=0.035, w=0.062 * lw, h=0.068 * lw), dict(t=0.12, w=0.058 * lw, h=0.07 * lw, oy=-0.008), dict(t=0.22, w=0.052 * lw, h=0.06 * lw, oy=-0.006),
-                 dict(t=0.31, w=0.044 * lw, h=0.05 * lw, oy=-0.002), dict(t=S['shin'] + 0.02, w=0.048 * lw, h=0.054 * lw)], N=28, step=0.025, mat='cuoio')
+                 dict(t=S['shin'] * 0.84, w=0.044 * lw, h=0.05 * lw, oy=-0.002), dict(t=S['shin'] + 0.02, w=0.048 * lw, h=0.054 * lw)], N=28, step=0.025, mat='cuoio')
     KB = boot.bvh(); sh.add(boot)
     def cuff_def(p, a, t):                          # risvolto con la punta sul davanti e il profilo dorato
         d = (a + 0.5) % 1 - 0.5; dip = 0.034 * exp(-(d / 0.07) ** 2) * sm(0.02, 0.07, t)
