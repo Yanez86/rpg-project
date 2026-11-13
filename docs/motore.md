@@ -66,6 +66,14 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `render/lighting.js` | `setupAtmosphere()` | nebbia e luci per `E.mood` |
 | `render/post.js` | `createPost({pixelRatio, reflections, scanlines})` | SSAO, SSR, foschia, bloom, grading, scanlines |
 | `render/nightLights.js` | `createNightLights({groundAt})` | light culling, pozze, coni, aloni |
+| `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
+| `characters/villager.js` | `villager()`, `elf()`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta` |
+| `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
+| `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
+| `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
+| `characters/toon.js` | `setToon(root, on, {outline})`, `TOON` | cel shading "anime" (stile JRPG) solo sui personaggi: luce propria fissata alla camera, ombra lilla a due toni, rim light, contorno sottile; non tocca le luci della scena. `TOON` contiene i parametri |
+| `characters/npc.js` | `wanderer(actor, {pick, groundAt, collide, player, others, ...})`, `eyeHeight(actor)` | comparse che passeggiano, si fermano e salutano chi gioca; altezza degli occhi per la camera |
+| `controls/thirdPerson.js` | `thirdPerson({canvas, actor, walk, run, collide, stick, knob, actions})` | muovi un personaggio in terza persona; clip automatiche `fermo`/`cammina`/`corre`, azioni da tasto (es. E → `saluta`) |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 
 Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine/demo/main.js`) mostra l'ordine completo.
@@ -74,14 +82,26 @@ Gli `update` restituiti dai moduli vanno chiamati a ogni frame. La demo (`engine
 
 I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un server qualsiasi, per esempio `npx serve engine` oppure `python3 -m http.server -d engine`, e apri `/demo/`. Aggiungi `#notte` all'indirizzo per la versione notturna.
 
+## Prova dei personaggi
+
+`engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
+
+## Anteprime senza browser
+
+`engine/tools/anteprima/` disegna un personaggio di fronte, di profilo e di tre quarti senza GPU (vedi il README lì): serve a controllare forme e proporzioni prima di pubblicare.
+
 ## Test
 
-`cd engine && npm test` esegue la demo in Node con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
+`cd engine && npm test` esegue la demo in Node (aggiungi `personaggi.js` per la pagina dei personaggi) con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
 Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, import ed export sbagliati), non errori degli shader.
 
 ## Cosa non è ancora un modulo
 
 Gli elementi unici della scena di riferimento: fontana a tre vasche, torre del mago, mulino, bancarelle del mercato, lampioni, festoni con bandierine, pozzo, carretto, bacheca, petali che cadono.
 Sono in `reference/valfiorita-pioggia.html` e vanno estratti quando servono, seguendo lo stesso schema.
+
+## Usare il motore in una pagina "classica"
+
+Le scene di `reference/` caricano three r128 come variabile globale (`window.THREE`). Per aggiungerci oggetti del motore (es. le comparse di `reference/valfiorita-sole.html`) l'import map punta `three` a `engine/tools/three-global.js`, che riesporta il three globale: pagina e moduli usano così la stessa copia di three. La pagina espone `window.VF` (scena, camera, `groundAt`, `collide`, `player`, `setEye`, `onTick`) e un modulo come `reference/gente-sole.js` ci aggancia i personaggi. `node --import ./test/register.mjs test/gente-sole.mjs` ne fa la prova di fumo.
 
 La **Locanda del Boccale** (`scene/locanda.html`) è nata come scena autonoma, prima del motore a moduli: i suoi pezzi vanno ancora portati in moduli. Sono le luci d'interno a rotazione per stanza, le fiamme a pixel, il `wear()` con la fuliggine, muri con aperture, finestre e porte viste da dentro, scala e ringhiera, camino, lampadario a ruota, lanterna a olio, candele, tavoli e sedute, bancone, cucina, letto e stoviglie. Le ricette sono in `docs/oggetti.md`.

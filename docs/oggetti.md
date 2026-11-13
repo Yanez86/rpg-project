@@ -83,6 +83,55 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 ## Fumo e nebbia — `softSys`
 - **Particelle morbide a billboard** istanziate con texture fbm: fumo dei comignoli (12 per camino), 40 banchi di nebbia che derivano, nebbiolina di cascata e fontana.
 
+## Personaggi a marionetta — `characters/puppet.js`
+- Corpo fatto di **pezzi rigidi** appesi a **giunti** con nome (niente pelle che si deforma): come una marionetta.
+- Le animazioni sono **clip di keyframe** (`makeClip`) campionate da funzioni del tempo: si esportano in glTF e in Godot diventano animazioni dell'`AnimationPlayer` con lo stesso nome.
+- Materiali senza usura (l'usura è legata al mondo), texture pixel-art a colori pieni per volti e pelo.
+- Guardano verso +z, i piedi toccano y=0. Nomi di giunti e clip in italiano.
+
+## Umanoidi: abitante ed elfa — `villager()`, `elf()`
+- Stesso scheletro e stesse clip: giunti `anca`, `busto`, `collo`, `testa`, `mantello`, `spallaS/D`, `gomitoS/D`, `cosciaS/D`, `ginocchioS/D` (S = sinistra = +x). Clip `fermo`, `cammina`, `corre`, `saluta` generate da `villagerClips({ hip, stride, arm })` con l'altezza dell'anca del personaggio.
+- **Forme morbide con il loft** (asse verticale): bacino e gonna che si allarga, busto con vita, petto e spalle, cintura con fibbia, braccia con manica che si allarga al polso, mano a muffola con pollice, cosce e polpacci con un leggero muscolo, stivale con gambale, risvolto e piede.
+- **Testa modellata** (`shapeHead`): una sfera deformata con funzioni morbide, senza modellazione a mano: mascella e mento che si stringono (di più nell'elfa), nuca, tempie, piano del viso raccordato, arcate sopraccigliari, orbite, zigomi, guance appena incavate, naso con le ali, labbra, solco sotto il labbro, mento. I tratti scolpiti coincidono con quelli dipinti nel volto (texture 64×32 che avvolge la sfera, viso sul davanti).
+- **Capelli in un unico pezzo** (`hairGeometry`): una sfera ad alta risoluzione che segue la forma della testa; sul viso la superficie rientra con un bordo netto (attaccatura pulita, anche dietro le orecchie e sotto il mento); ciocche in rilievo che scendono, volume morbido sulla calotta, punte irregolari. Abitante: corti, che si aprono sulla nuca. Elfa: lunghi dietro e ai lati (circa mezzo metro), che scendono un poco staccati dalla schiena. Barba in volume con i baffi a parte; orecchie a conchiglia con l'interno più scuro; per l'elfa orecchie a lama con l'incavo e orecchino.
+- Mantellina a cono sulle spalle e **mantello curvo** (spicchio di cilindro) appeso al giunto `mantello`.
+- **Anatomia** (con il loft, misure in `VILLAGER`/`ELF`): busto con curva lombare, costato e petto; deltoidi; bicipite e muscolo dell'avambraccio; polso sottile; mano a muffola con il pollice (volutamente semplice); coscia con il quadricipite, rotula, polpaccio.
+- **Vestiti**: orlo della gonna con una fascia, cintura con fibbia e borsello, polsini; stivali con lacci incrociati e suola.
+- **Abitante**: circa 1,75 m, anca a 0,93 m; collo a V e tre bottoni sulla tunica; tunica di lana, tracolla e bisaccia, varianti casuali di carnagione, capelli, vestiti, barba, cappuccio o cappello.
+- **Elfa**: circa 1,9 m, anca a 1,0 m; tutto più snello (busto ×0,84, braccia ×0,8, gambe ×0,86), gambe e collo più lunghi, testa un po' più piccola. **Figura femminile accentuata con misura**: vita stretta (0,11), fianchi più larghi (0,21), petto modellato nella stessa sezione del busto (due rigonfiamenti morbidi del loft, `bumps`, non pezzi separati appoggiati sopra), corsetto di cuoio allacciato sul davanti, colletto alto, spallacci a lamelle d'argento, maniche a campana. Abito lungo di stoffa fine che si allarga, bracciali di cuoio, stivali alti, mantello più lungo, capelli lunghi sulla schiena, orecchie a punta, diadema d'argento con gemma, volto con occhi a mandorla, ciglia e labbra. Passo più lungo e braccia che oscillano meno. Quattro palette (verde, avorio, viola, ruggine).
+
+## Gatto — `cat()`
+- Giunti: `corpo`, `testa`, `orecchioS/D`, `zampaAS/AD/PS/PD` con `gambaAS/AD/PS/PD`, coda in 6 anelli `coda0…coda5`.
+- Pelo tigrato in pixel-art (rosso, grigio, nero con petto bianco, crema), ventre e muso chiari, occhi con pupilla a fessura, "M" sulla fronte, baffi, orecchie con l'interno rosa.
+- Clip: `fermo` (coda che ondeggia a S, orecchio che scatta), `cammina` (passo laterale: posteriore e anteriore dello stesso lato in sequenza), `trotta` (diagonali insieme), `seduto`.
+
+## Drago — `dragon()`
+- Scala: testa a circa 8,7 m (cinque volte l'abitante), corpo lungo circa 7 m, apertura alare circa 17 m.
+- Giunti: `corpo`, `collo0…collo5`, `testa`, `mascella`, `coda0…coda9`, `zampaAS/AD/PS/PD`, `gambaAS/AD/PS/PD`, `piedeAS/AD/PS/PD`, `alaS/D`, `avambraccioS/D`, `manoS/D`, `ditoS1…4` e `ditoD1…4`.
+- **Forme organiche con il loft** (`characters/loft.js`): ogni pezzo è una sezione ellittica che scorre lungo un asse cambiando larghezza e altezza, con un rigonfiamento a metà per i muscoli. Niente parallelepipedi: corpo con fianchi, ventre e petto; anelli di collo e coda affusolati che si sovrappongono; cosce muscolose; testa con cranio e muso in un solo pezzo.
+- **Pelle dipinta a colori** (64×64, a colori pieni, non grigio tinto):
+  - scaglie embricate a ventaglio, ogni fila copre la successiva; luce in alto e ombra in basso, carena centrale, riflesso iridescente sul bordo alto (oro sul cremisi, verde acqua sul bronzo, viola sull'ardesia, rosso sul nero), contorno netto, ombra portata sulla fila sotto;
+  - ogni scaglia ha la sua tinta; qualcuna è scheggiata o segnata da un graffio (cicatrici);
+  - la texture è dimensionata in metri (`tile: [1.6, 1.6]` nel loft): le scaglie hanno la stessa misura su corpo, collo, coda e zampe (circa 20 cm);
+  - **disegno ampio con i colori per vertice**: dorso più scuro, fianchi, chiaro verso il ventre (controombreggiatura), bande scure sul dorso, macchie;
+  - ventre a placche larghe con solco scuro e bordo lucido; corna con anelli di crescita ondulati e punta chiara;
+  - membrana delle ali con UV a ventaglio: ossa delle dita, venature che si diramano verso il bordo, chiazze traslucide, bordo scuro.
+- **Attenzione**: le texture ripetute (`uRep`/`vRep` > 1) devono avere `RepeatWrapping`, altrimenti si allunga l'ultimo pixel e la pelle sembra piatta.
+- Cresta dorsale di spine dalla testa alla punta della coda; coda che si assottiglia e finisce a losanga.
+- Testa con cranio e muso affusolato, arcate sopraccigliari, occhi ambra a mandorla con palpebra, narici, zanne più lunghe davanti, lingua, due paia di corna ricurve in quattro segmenti, frangia di spine sulle guance.
+- Zampe in tre segmenti (quelle posteriori digitigrade), piede con tre dita in avanti e uno sperone dietro, ognuno col suo artiglio ricurvo; muscoli di spalle e cosce attaccati al corpo.
+- Ali: omero, avambraccio, mano con artiglio, quattro dita. La **membrana** è una mesh ricalcolata a ogni frame dalle posizioni delle ossa (`update()`), con il bordo d'uscita a festone. In Godot va rifatta come mesh con scheletro (skinning).
+- Varianti: cremisi, verde bronzo, ardesia, nero.
+- Clip: `fermo` (respiro lento, collo e coda che ondeggiano, ali chiuse), `cammina` (2,4 s, passo laterale), `ruggisce` (si impenna, apre la mascella e le ali), `vola` (battito d'ali, zampe raccolte, si alza di circa 4 m).
+
+## Comparse che passeggiano — `wanderer()`, `eyeHeight()` (`characters/npc.js`)
+- Ciclo: sceglie una meta (`pick()`), si gira (max 3,2 rad/s) e cammina con la clip `cammina` a una velocità che corrisponde al passo dell'animazione (abitante 1,35 m/s, elfa 1,45, gatto 0,5 / trotto 1,25); alla meta si ferma da 1,5 a 7 s.
+- Ogni tanto la meta si raggiunge di corsa (`run`, `runChance`); il gatto a volte si siede a lungo (`rest: 'seduto'`).
+- Se chi gioca si avvicina (2,6 m) si gira verso di lui e saluta; poi non saluta più per 14 s.
+- Si scansano tra loro (`others`) e scansano chi gioca; `collide(p)` della scena le tiene fuori dagli ostacoli. Se in 2 s avanzano meno di 0,5 m cambiano meta.
+- `eyeHeight(actor)`: altezza degli occhi nella posa di riposo (abitante circa 1,61 m); serve per la camera in prima persona.
+- Esempio: `reference/gente-sole.js` (5 abitanti, 2 elfe, 2 gatti in Valfiorita al sole).
+
 ---
 
 # Interni — `scene/locanda.html` (Locanda del Boccale)

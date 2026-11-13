@@ -25,6 +25,7 @@ I nomi usati durante il lavoro, con una spiegazione breve. Utile per parlarne e 
 | **Alpha cards** (foglie su card) | piani incrociati con texture di foglie trasparenti per chiome complesse | alberi, felci |
 | **L-system / ramificazione ricorsiva** | rami generati da regole che si ripetono | alberi |
 | **Vertex wind** | oscillazione dei vertici nel vertex shader | foglie |
+| **Loft** (estrusione a sezioni) | solido ottenuto facendo scorrere una sezione che cambia forma lungo un percorso | corpo, collo, coda, zampe, testa del drago |
 | **LatheGeometry** (tornitura) | solido ottenuto ruotando un profilo | lanterne |
 | **Extrude** (estrusione) | solido ottenuto spingendo una sagoma 2D | insegne, ponte |
 | **Instancing** (`InstancedMesh`) | migliaia di copie della stessa geometria in una chiamata | erba, fiori, foglie, canne |

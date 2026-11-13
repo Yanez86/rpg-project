@@ -7,10 +7,11 @@ let frames = 0;
 Object.assign(globalThis, {
   innerWidth: 390, innerHeight: 844, devicePixelRatio: 3,
   window: globalThis, location: { search: '', hash: process.argv.includes('--notte') ? '#notte' : '' },
-  document: { getElementById: id => els[id] || (els[id] = el()), createElement: () => ({ width: 0, height: 0, getContext: canvas2d }) },
+  document: { getElementById: id => els[id] || (els[id] = el()), querySelectorAll: () => [], createElement: () => ({ width: 0, height: 0, getContext: canvas2d }) },
   addEventListener() {}, requestAnimationFrame: f => { if (frames++ < 3) setTimeout(f, 0); },
 });
 process.on('uncaughtException', e => { console.error('ERRORE:', e); process.exit(1); });
-await import('../demo/main.js');
+const page = process.argv.find(a => a.endsWith('.js')) || 'main.js';
+await import('../demo/' + page);
 await new Promise(r => setTimeout(r, 50));
-console.log(`ok · ${process.argv.includes('--notte') ? 'notte' : 'pioggia'} · frame eseguiti: ${frames}`);
+console.log(`ok · ${page} · ${process.argv.includes('--notte') ? 'notte' : 'pioggia'} · frame eseguiti: ${frames}`);
