@@ -39,18 +39,18 @@ function faceTexHD(f) {
     const dx = x - 32, ax = Math.abs(dx), sd = Math.sign(dx);
     let c = mul(S, 0.94 + hn(x >> 1, y >> 1, 310) * 0.07);
     if (ax > 18) c = mul(c, 0.93);                                                                 // guance e lati in ombra
-    if (ax >= 9 && ax <= 14 && y >= 37 && y <= 39) c = [c[0] * 1.0, c[1] * 0.92, c[2] * 0.92];    // rossore
-    const brow = ax >= 4 && ax <= 11 && y === 29 - (ax >= 6 && ax <= 9 ? 1 : 0);
+    if (ax >= 9 && ax <= 13 && y >= 37 && y <= 38) c = [c[0], c[1] * 0.95, c[2] * 0.95];          // rossore leggero
+    const brow = ax >= 3 && ax <= 10 && y === 29 - (ax >= 5 && ax <= 8 ? 1 : 0);
     if (brow) c = mul(H, 0.68);
-    if (y === 31 && ax >= 4 && ax <= 11) c = [34, 26, 30];                                         // ciglia sopra
-    if (y === 30 && ax >= 11 && ax <= 12) c = [34, 26, 30];                                        // coda delle ciglia
-    if ((y === 32 && ax >= 5 && ax <= 10) || (y === 33 && ax >= 5 && ax <= 9)) {                  // occhio a mandorla
+    if (y === 31 && ax >= 3 && ax <= 10) c = [34, 26, 30];                                         // ciglia sopra
+    if (y === 30 && ax >= 10 && ax <= 11) c = [34, 26, 30];                                        // coda delle ciglia
+    if ((y === 32 && ax >= 4 && ax <= 9) || (y === 33 && ax >= 4 && ax <= 8)) {                   // occhio a mandorla
       c = [236, 232, 224];
-      if (ax >= 6 && ax <= 8) c = y === 32 ? mul(E, 0.78) : E;                                     // iride, più scura sotto la palpebra
-      if (ax === 7 && y === 33) c = mul(E, 0.45);                                                  // pupilla
-      if (y === 32 && dx === (sd < 0 ? -8 : 6)) c = [250, 248, 240];                               // riflesso (luce da sinistra)
+      if (ax >= 5 && ax <= 7) c = y === 32 ? mul(E, 0.78) : E;                                     // iride, più scura sotto la palpebra
+      if (ax === 6 && y === 33) c = mul(E, 0.45);                                                  // pupilla
+      if (y === 32 && dx === (sd < 0 ? -7 : 5)) c = [250, 248, 240];                               // riflesso (luce da sinistra)
     }
-    if (y === 34 && ax >= 6 && ax <= 9) c = mul(S, 0.82);                                          // ciglia sotto, leggere
+    if (y === 34 && ax >= 5 && ax <= 8) c = mul(S, 0.82);                                          // ciglia sotto, leggere
     if ((y === 38 && (dx === 0 || dx === -1)) || (y === 39 && dx === 1)) c = mul(S, 0.86);         // naso
     if (y === 42 && ax <= 2) c = [S[0] * 0.8, S[1] * 0.5, S[2] * 0.52];                            // labbro sopra
     if (y === 43 && ax <= 1) c = [S[0] * 0.88, S[1] * 0.64, S[2] * 0.64];                          // labbro sotto

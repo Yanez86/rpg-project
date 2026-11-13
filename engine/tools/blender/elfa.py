@@ -276,33 +276,34 @@ def D(j): return DET.setdefault(j, Part())
 
 # ================================================================= TESTA
 def shape_head(x, y, z, elf=True, inflate=0.0):
-    """porting di shapeHead() di villager.js (sfera unitaria → testa; z avanti, y alto)"""
+    """porting di shapeHead() di villager.js (sfera unitaria → testa; z avanti, y alto), con il viso dell'elfa più
+    armonioso: ovale che si affina verso un mento piccolo, metà bassa del viso più lunga, profilo meno appiattito"""
     f0 = max(0.0, min(1.0, (z - 0.05) / 0.75)); F = f0 * f0 * (3 - 2 * f0)
     if y < 0:
-        k = (-y) ** 1.25; x *= 1 - (0.42 if elf else 0.28) * k
+        k = (-y) ** (1.6 if elf else 1.25); x *= 1 - (0.48 if elf else 0.28) * k             # nell'elfa le guance restano piene, si affina il mento
         if z < 0.2: z = z * (1 - 0.35 * k)
-        if elf: y *= 1.06
+        if elf: y *= 1.1
     if z < 0: z *= 1.03 + 0.05 * max(0.0, y)
     x *= 1 - 0.08 * exp(-((y - 0.3) / 0.2) ** 2) * (1 - abs(z))
-    if z > 0.3: t = z - 0.3; z = 0.3 + t * (1 - 0.6 * min(1.0, t / 0.45))
+    if z > 0.3: t = z - 0.3; z = 0.3 + t * (1 - (0.4 if elf else 0.6) * min(1.0, t / 0.45))
     if y < -0.1: z += 0.06 * min(1.0, (-y - 0.1) / 0.4) * F
     if not inflate:
         z += 0.09 * exp(-((y - 0.22) / 0.08) ** 2) * exp(-1.5 * (x / 0.6) ** 2) * F
         for sd in (-1, 1): z -= 0.1 * exp(-((x - sd * 0.3) / 0.15) ** 2 - ((y - 0.07) / 0.1) ** 2) * F
         z += 0.05 * exp(-((abs(x) - 0.4) / 0.13) ** 2 - ((y + (0.0 if elf else 0.06)) / 0.11) ** 2) * F
-        z -= 0.035 * exp(-((abs(x) - 0.38) / 0.12) ** 2 - ((y + 0.36) / 0.14) ** 2) * F
+        z -= (0.012 if elf else 0.035) * exp(-((abs(x) - 0.38) / 0.12) ** 2 - ((y + 0.36) / 0.14) ** 2) * F        # guance (nell'elfa appena)
         nb = exp(-(x / (0.07 if elf else 0.09)) ** 2); n = 0.0 if (y > 0.14 or y < -0.32) else (0.14 - y) / 0.44
         if y < -0.22: n *= max(0.0, (y + 0.32) / 0.1)
         z += (0.17 if elf else 0.22) * n * nb * F
         z += 0.04 * exp(-((abs(x) - 0.12) / 0.05) ** 2 - ((y + 0.25) / 0.05) ** 2) * F
         z += 0.04 * exp(-(x / 0.22) ** 2 - ((y + 0.43) / 0.05) ** 2) * F + 0.035 * exp(-(x / 0.18) ** 2 - ((y + 0.54) / 0.05) ** 2) * F
         z -= 0.02 * exp(-(x / 0.2) ** 2 - ((y + 0.64) / 0.05) ** 2) * F
-        z += (0.06 if elf else 0.08) * exp(-(x / 0.24) ** 2 - ((y + 0.82) / 0.1) ** 2) * F
+        z += (0.075 if elf else 0.08) * exp(-(x / 0.22) ** 2 - ((y + 0.86) / 0.11) ** 2) * F
     k = 1 + inflate; return (x * k, y * k, z * k)
 
 def hair_point(x, y, z):
     """porting di hairGeometry(true) con più dettaglio: ciocche più fini sopra quelle grandi"""
-    face = sm(0.12, 0.42, z) * sm(0.4, 0.3, y + 0.12 * x * x)
+    face = sm(0.12, 0.42, z) * sm(0.48, 0.37, y + 0.12 * x * x)                          # attaccatura un po' più alta: più fronte
     ear = sm(0.6, 0.85, abs(x)) * sm(0.25, -0.05, y) * sm(-0.35, 0.05, z)
     chin = sm(-0.4, -0.7, y) * sm(-0.35, 0.05, z)
     k = 1 - 0.45 * max(face, ear * 0.3, chin * 0.65); x, y, z = x * k, y * k, z * k
@@ -319,7 +320,7 @@ def hair_point(x, y, z):
     z -= 0.32 * below * w
     return (x + nx * out, y, z + nz * out)
 
-HS = (0.1 * hs, 0.128 * hs, 0.118 * hs); HY = 0.125 * hs
+HS = (0.093 * hs, 0.13 * hs, 0.118 * hs); HY = 0.125 * hs                              # un po' più stretta e alta dell'elfa del motore
 def head_xf(p): return (p[0] * HS[0], p[1] * HS[1] + HY, p[2] * HS[2] + 0.005)
 
 head = sphere_grid(48, 36, PI, lambda x, y, z: head_xf(shape_head(x, y, z)), 'volto')
@@ -341,19 +342,19 @@ for s in (1, -1):
     e = loft(secs, N=14, axis='y', step=0.01, caps=(True, False), deform=ear_def, mat='pelle',
              matf=lambda a, t: 'pelle_ombra' if (abs(((a + 0.5) % 1) - 0.5) < 0.17 and 0.08 < t / 0.168 < 0.86) else 'pelle')
     e.v = [(x, -y, z) for x, y, z in e.v]; e.f = [f[::-1] for f in e.f]; e.uv = [u[::-1] for u in e.uv]   # la lama sale verso +y
-    e.xform(tr(s * 0.098 * hs, 0.115 * hs, -0.005) @ rot(-0.55, s * 0.35, -s * 1.15)); ears.add(e)
+    e.xform(tr(s * 0.092 * hs, 0.115 * hs, -0.005) @ rot(-0.55, s * 0.35, -s * 1.15)); ears.add(e)
     # orecchino: anello e goccia
-    c = Vector((s * 0.104 * hs, 0.083 * hs, 0.0))
+    c = Vector((s * 0.097 * hs, 0.083 * hs, 0.0))
     deco.add(tube([tuple(c + Vector((0.0075 * sin(a / 16 * TAU) * 0.35, -0.0075 * cos(a / 16 * TAU), 0.0075 * sin(a / 16 * TAU)))) for a in range(16)], 0.0016, 6, True, 'metallo'))
     deco.add(gem(tuple(c + Vector((0, -0.017, 0))), (0.0035, 0.006, 0.0035)))
 
 # diadema: nastro d'argento appoggiato su capelli e fronte, scende a punta sulla fronte con la gemma; foglie ai lati
-ang = PI / 2 + 0.22; RM = tr(0, 0.2 * hs, -0.004) @ rot(ang); C0 = RM @ Vector((0, 0, 0)); UPd = (rot(ang) @ Vector((0, 0, -1, 0))).to_3d().normalized()
+ang = PI / 2 + 0.17; RM = tr(0, 0.205 * hs, -0.004) @ rot(ang); C0 = RM @ Vector((0, 0, 0)); UPd = (rot(ang) @ Vector((0, 0, -1, 0))).to_3d().normalized()
 band, ups, front = [], [], None
 for k in range(72):
     th = k / 72 * TAU; R0 = 0.104 * hs
     p = RM @ Vector((R0 * cos(th), 1.17 * R0 * sin(th), 0)); dth = (th - PI / 2 + PI) % TAU - PI
-    p.y -= 0.016 * exp(-(dth / 0.3) ** 2)
+    p.y -= 0.011 * exp(-(dth / 0.3) ** 2)
     d = Vector((p.x - C0.x, 0.0, p.z - C0.z)).normalized()
     q = probe(HB, p + d * 0.08, -d, 0.0024) or p
     band.append(tuple(q)); ups.append(tuple(UPd))
