@@ -80,6 +80,41 @@ export function shapeHead(g, elf, inflate) {
   g.computeVertexNormals(); return g;
 }
 
+/**
+ * Capelli in un unico pezzo: una sfera che avvolge la testa con la stessa forma (shapeHead), il viso "rientra"
+ * sotto l'attaccatura, ciocche in rilievo che scendono dalla scriminatura, volume morbido sulla calotta,
+ * punte irregolari. Per l'elfa i capelli dietro e ai lati scendono lunghi sulla schiena e si allontanano un poco dal corpo.
+ * Coordinate della testa unitaria (z avanti, y alto): la scala viene applicata dalla mesh.
+ */
+export function hairGeometry(elf) {
+  const g = new THREE.SphereGeometry(1, 72, 60, 0, PI * 2, 0, PI * 0.98), pa = g.attributes.position;
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  // 1) l'attaccatura: dove c'è il viso la superficie rientra dentro la testa
+  for (let i = 0; i < pa.count; i++) { let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
+    const face = sm(0.12, 0.42, z) * sm(elf ? 0.4 : 0.46, elf ? 0.3 : 0.36, y + 0.12 * x * x);   // bordo netto: l'attaccatura è una linea pulita      // finestra del viso, con l'attaccatura che sale ai lati
+    const ear = sm(0.6, 0.85, Math.abs(x)) * sm(0.25, -0.05, y) * sm(-0.35, 0.05, z) * (elf ? 1 : 0.6);          // dietro le orecchie
+    const chin = sm(-0.4, -0.7, y) * sm(-0.35, 0.05, z);                                                          // sotto il mento e sul collo davanti
+    const k = 1 - 0.45 * Math.max(face, ear * 0.3, chin * 0.65); pa.setXYZ(i, x * k, y * k, z * k); }
+  shapeHead(g, elf, 0.075);
+  for (let i = 0; i < pa.count; i++) { let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
+    const phi = Math.atan2(z, -x), top = sm(0.2, 0.95, y), r = Math.hypot(x, z) || 1;
+    // ciocche: solchi morbidi che scendono, più marcati in basso; volume sulla calotta; un po' di disordine
+    const strands = 0.035 * Math.sin(phi * 22 + Math.sin(phi * 5) * 1.5) * (1 - top * 0.7) + 0.02 * Math.sin(phi * 9 + y * 3);
+    const puff = 0.05 * top + 0.03 * sm(0.4, 0.9, y) * Math.sin(phi * 3 + 1);
+    let nx = x / r, nz = z / r, out = strands + puff;
+    if (elf) { // capelli lunghi: dietro e ai lati si allungano verso il basso; le punte sono irregolari
+      const back = sm(0.35, -0.6, z), side = sm(0.6, 0.95, Math.abs(x)) * sm(0.3, -0.3, z) * 0.6, w = Math.max(back, side);
+      const below = sm(0.15, -0.95, y), len = (elf ? 3.9 : 0) * (1 + 0.12 * Math.sin(phi * 7) + 0.07 * Math.sin(phi * 17));
+      y -= len * below * below * w;
+      out += 0.18 * below * w + 0.04 * Math.sin(phi * 26) * below * w;                                           // si allargano e restano ciocche
+      z -= 0.32 * below * w;                                                                                     // scendono un po' staccati dalla schiena
+    } else { // corti: punte che si aprono appena sotto la nuca
+      const below = sm(0.0, -0.6, y); y -= 0.12 * below * (1 + 0.5 * Math.sin(phi * 11)); out += 0.04 * below; }
+    pa.setXYZ(i, x + nx * out, y, z + nz * out);
+  }
+  g.computeVertexNormals(); return g;
+}
+
 const VILLAGER = {
   hip: 0.93, thigh: 0.42, shin: 0.30, W: 1, chest: 0.19, waist: 0.17, hips: 0.18, torso: 0.46, shoulder: 0.24, upper: 0.27, fore: 0.24,
   skirt: 0.26, flare: 1.15, neck: 0.06, head: 1, armW: 1, legW: 1, bust: 0,
@@ -119,7 +154,6 @@ function humanoid(S, look) {
     LO(torso, [{ t: 0.0, w: S.waist * W + 0.008, h: 0.106 * W + 0.006 }, { t: -0.1, w: S.waist * W * 0.98 + 0.008, h: 0.1 * W + 0.006, oy: -0.004 }, { t: -0.2, w: (S.waist + S.chest) / 2 * W + 0.008, h: 0.112 * W + 0.006 },
       { t: -0.25, w: ch * 0.97 + 0.006, h: 0.118 * W + 0.006, oy: 0.01 }], [M.leather, M.leather], { radial: 18 });
     for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) { const l = add(torso, new THREE.BoxGeometry(0.045, 0.005, 0.004), M.trim, 0, 0.04 + k * 0.05, 0.106 * W + 0.012); l.rotation.z = sd * 0.6; }
-    { const sash = add(hips, new THREE.BoxGeometry(0.09, S.skirt * 0.95, 0.008), M.trim, 0, S.skirt * 0.47 - 0.02, hipW * 0.62 + 0.03 * S.flare); sash.rotation.x = -0.12; }  // fascia ricamata davanti
   } else { // collo a V allacciato e bottoni della tunica
     { const g = new THREE.ConeGeometry(0.05, 0.12, 3); g.rotateZ(PI); const v = add(torso, g, M.skin, 0, S.torso - 0.08, 0.118 * W); v.scale.set(1, 1, 0.12); }
     for (let k = 0; k < 3; k++) add(torso, new THREE.SphereGeometry(0.008, 6, 4), M.metal, 0, 0.12 + k * 0.07, 0.132 * W + (k > 1 ? 0.006 : 0));
@@ -141,13 +175,8 @@ function humanoid(S, look) {
   const HS = [0.1 * hs, 0.128 * hs, 0.118 * hs], hy = 0.125 * hs;
   const shell = (geo, mat, inflate) => { shapeHead(geo, look.elf, inflate); const m = add(head, geo, mat, 0, hy, 0.005); m.scale.set(...HS); return m; };
   shell(new THREE.SphereGeometry(1, 36, 28), M.face, 0);                                                                     // testa modellata con il volto
-  // capelli: calotta e nuca che seguono la forma della testa (il davanti resta scoperto)
-  shell(new THREE.SphereGeometry(1, 28, 10, 0, PI * 2, 0, PI * (look.elf ? 0.36 : 0.4)), M.hair, 0.07);
-  shell(new THREE.SphereGeometry(1, 28, 14, PI / 2 + 0.95, PI * 2 - 1.9, 0, PI * 0.72), M.hair, 0.075);
-  if (look.beard) { shell(new THREE.SphereGeometry(1, 24, 10, PI / 2 - 1.2, 2.4, PI * 0.6, PI * 0.38), M.hair, 0.07);              // barba in volume
-    const mo = add(head, new THREE.SphereGeometry(1, 10, 6), M.hair, 0, hy - 0.048 * hs, 0.112 * hs); mo.scale.set(0.034 * hs, 0.009, 0.012); }   // baffi
-  if (!look.elf) for (let k = 0; k < 6; k++) { const a = k / 6 * PI * 2 + 0.3, t = add(head, new THREE.SphereGeometry(1, 8, 6), M.hair, Math.sin(a) * 0.07 * hs, hy + 0.115 * hs + (k % 2) * 0.01, Math.cos(a) * 0.07 * hs - 0.01);
-    t.scale.set(0.035 * hs, 0.022 * hs, 0.045 * hs); t.rotation.y = a; }                                                      // ciocche spettinate
+  // capelli: un unico pezzo che segue la testa, con l'attaccatura, le ciocche e le punte irregolari
+  { const hg = hairGeometry(look.elf); const hm = add(head, hg, M.hair, 0, hy, 0.005); hm.scale.set(...HS); }
   // orecchie: conca a forma di guscio con il lobo; quelle dell'elfa sono lame a punta
   for (const s of [-1, 1]) {
     if (look.elf) { const g = new THREE.ConeGeometry(0.028, 0.16, 8); g.translate(0, 0.08, 0); g.scale(1, 1, 0.38);
@@ -158,16 +187,14 @@ function humanoid(S, look) {
       const ie = add(head, new THREE.SphereGeometry(1, 8, 6), charMat(new THREE.Color(skinHex).multiplyScalar(0.8).getHex()), s * 0.112 * hs, 0.112 * hs, -0.006); ie.scale.set(0.006, 0.022, 0.014); }
   }
   if (look.elf) {
-    // capelli lunghi che scendono sulla schiena, orecchie a punta, diadema
-    LO(head, [{ t: -0.02, w: 0.08, h: 0.045, oy: -0.075 }, { t: 0.15, w: 0.088, h: 0.038, oy: -0.1 }, { t: 0.4, w: 0.08, h: 0.03, oy: -0.115 }, { t: 0.6, w: 0.045, h: 0.018, oy: -0.12 }], [M.hair, M.hair], { radial: 12 }, 0, 0.06, 0);
-    for (const s of [-1, 1]) LO(head, [{ t: 0, w: 0.022, h: 0.016 }, { t: 0.14, w: 0.026, h: 0.014 }, { t: 0.3, w: 0.018, h: 0.01 }, { t: 0.36, w: 0.006, h: 0.004 }], [M.hair, M.hair], { radial: 8 }, s * 0.092 * hs, 0.17 * hs, 0.05 * hs);   // ciocche ai lati del viso
+    // orecchie a punta, diadema
     const ring = add(head, new THREE.TorusGeometry(0.104 * hs, 0.005, 4, 28), M.metal, 0, 0.2 * hs, -0.004); ring.rotation.x = PI / 2 + 0.22; ring.scale.set(1, 1.17, 1);
     add(head, new THREE.OctahedronGeometry(0.013, 0), charMat(look.gem || 0x6ac8b0), 0, 0.17 * hs, 0.123 * hs);
   } else {
     if (look.hat === 'cappuccio') { const h = add(head, new THREE.SphereGeometry(1, 16, 10, PI / 2 + 0.75, PI * 2 - 1.5, 0, PI * 0.75), DS(M.cloak), 0, 0.13, -0.01); h.scale.set(0.15, 0.17, 0.155); }
     if (look.hat === 'cappello') { add(head, new THREE.CylinderGeometry(0.24, 0.25, 0.022, 16), M.leather, 0, 0.255, 0); add(head, new THREE.CylinderGeometry(0.105, 0.13, 0.12, 12), M.leather, 0, 0.32, 0); }
   }
-  // braccia: spalla tonda, bicipite, avambraccio che si assottiglia al polso, polsino, mano con quattro dita e pollice
+  // braccia: spalla tonda, bicipite, avambraccio che si assottiglia al polso, polsino, mano a muffola con il pollice
   for (const s of [1, -1]) { const L = s > 0 ? 'S' : 'D', aw = S.armW;
     const sh = joint(torso, 'spalla' + L, s * S.shoulder, S.torso - 0.04, 0);
     add(sh, new THREE.SphereGeometry(1, 12, 10), M.top, 0, -0.012, 0).scale.set(0.058 * aw, 0.062 * aw, 0.06 * aw);                                     // deltoide
@@ -179,12 +206,8 @@ function humanoid(S, look) {
       LO(el, taper(S.fore * 0.38, S.fore * 0.58, 0.046 * aw, 0.049 * aw, 0.043 * aw, 0.046 * aw, 0, 2), [M.leather, M.leather]); }                                      // bracciale
     else LO(el, taper(S.fore * 0.64, S.fore * 0.74, 0.048 * aw, 0.05 * aw, 0.048 * aw, 0.05 * aw, 0, 2), [M.trim, M.trim]);                                         // polsino
     LO(el, taper(S.fore * 0.66, S.fore + 0.01, 0.033 * aw, 0.035 * aw, 0.028 * aw, 0.031 * aw, 0, 3), [M.skin, M.skin], { radial: 8 });
-    const hand = joint(el, '', 0, -S.fore - 0.005, 0);
-    add(hand, new THREE.SphereGeometry(1, 10, 8), M.skin, 0, -0.035, 0.004).scale.set(0.022 * aw, 0.042, 0.04);                                          // palmo
-    for (let k = 0; k < 4; k++) { const f = joint(hand, '', 0, -0.07, 0.03 - k * 0.02); f.rotation.z = -s * (0.25 + k * 0.05);                                    // dita leggermente piegate
-      const g = new THREE.CylinderGeometry(0.0075, 0.0085, 0.045 - Math.abs(k - 1.5) * 0.006, 6); g.translate(0, -0.02, 0); add(f, g, M.skin);
-      add(f, new THREE.SphereGeometry(0.0075, 6, 4), M.skin, 0, -0.043 + Math.abs(k - 1.5) * 0.006, 0); }
-    { const t = joint(hand, '', -s * 0.012, -0.03, 0.035); t.rotation.set(0.5, 0, s * 0.5); const g = new THREE.CylinderGeometry(0.008, 0.01, 0.04, 6); g.translate(0, -0.02, 0); add(t, g, M.skin); }   // pollice
+    add(el, new THREE.SphereGeometry(1, 10, 8), M.skin, 0, -S.fore - 0.04, 0.005).scale.set(0.032 * aw, 0.055, 0.045);                               // mano
+    { const th = add(el, new THREE.SphereGeometry(1, 6, 5), M.skin, -s * 0.026 * aw, -S.fore - 0.025, 0.03); th.scale.set(0.014, 0.03, 0.014); }      // pollice
     // gambe: coscia con il quadricipite, rotula, polpaccio, stivale con gambale, lacci e suola
     const lw = S.legW, hp = joint(hips, 'coscia' + L, s * (0.088 + 0.02 * S.bust) * W, -0.06, 0);
     LO(hp, [{ t: -0.05, w: (0.074 + 0.012 * S.bust) * lw, h: 0.08 * lw }, { t: 0.1, w: (0.074 + 0.006 * S.bust) * lw, h: 0.084 * lw, oy: 0.01 }, { t: S.thigh * 0.62, w: 0.064 * lw, h: 0.07 * lw, oy: 0.006 },
