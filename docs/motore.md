@@ -83,3 +83,5 @@ Trova errori JavaScript (riferimenti mancanti, ordine di inizializzazione, impor
 
 Gli elementi unici della scena di riferimento: fontana a tre vasche, torre del mago, mulino, bancarelle del mercato, lampioni, festoni con bandierine, pozzo, carretto, bacheca, petali che cadono.
 Sono in `reference/valfiorita-pioggia.html` e vanno estratti quando servono, seguendo lo stesso schema.
+
+La **Locanda del Boccale** (`scene/locanda.html`) è nata come scena autonoma, prima del motore a moduli: i suoi pezzi vanno ancora portati in moduli. Sono le luci d'interno a rotazione per stanza, le fiamme a pixel, il `wear()` con la fuliggine, muri con aperture, finestre e porte viste da dentro, scala e ringhiera, camino, lampadario a ruota, lanterna a olio, candele, tavoli e sedute, bancone, cucina, letto e stoviglie. Le ricette sono in `docs/oggetti.md`.
