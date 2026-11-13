@@ -82,11 +82,11 @@ export function shapeHead(g, elf, inflate) {
 
 const VILLAGER = {
   hip: 0.93, thigh: 0.42, shin: 0.30, W: 1, chest: 0.19, waist: 0.17, hips: 0.18, torso: 0.46, shoulder: 0.24, upper: 0.27, fore: 0.24,
-  skirt: 0.26, flare: 1.15, neck: 0.06, head: 1, armW: 1, legW: 1,
+  skirt: 0.26, flare: 1.15, neck: 0.06, head: 1, armW: 1, legW: 1, bust: 0,
 };
 const ELF = {
-  hip: 1.0, thigh: 0.47, shin: 0.37, W: 0.84, chest: 0.175, waist: 0.135, hips: 0.17, torso: 0.5, shoulder: 0.205, upper: 0.3, fore: 0.27,
-  skirt: 0.5, flare: 1.45, neck: 0.09, head: 0.94, armW: 0.82, legW: 0.84,
+  hip: 1.0, thigh: 0.47, shin: 0.37, W: 0.84, chest: 0.172, waist: 0.11, hips: 0.21, torso: 0.5, shoulder: 0.2, upper: 0.3, fore: 0.27,
+  skirt: 0.5, flare: 1.38, neck: 0.09, head: 0.94, armW: 0.8, legW: 0.86, bust: 1,
 };
 
 function humanoid(S, look) {
@@ -94,7 +94,7 @@ function humanoid(S, look) {
   const M = {
     top: charMat(look.top, look.fine ? tx.fine : tx.cloth), skirt: charMat(look.skirt ?? look.top, look.fine ? tx.fine : tx.cloth), cloak: charMat(look.cloak, tx.cloth),
     trous: charMat(look.trous, tx.cloth), leather: charMat(look.boots ?? 0x4a3424, tx.leather), belt: charMat(0x2e2218, tx.leather),
-    metal: charMat(look.metal ?? 0xb08a48), skin: charMat(skinHex), hair: charMat(look.hair, tx.hair),
+    metal: charMat(look.metal ?? 0xb08a48), skin: charMat(skinHex), hair: charMat(look.hair, tx.hair), trim: charMat(look.trim ?? 0x2e2218, look.trim ? tx.fine : tx.leather),
     face: charMat(0xffffff, faceTex({ skin: look.skin, hair: look.hair, eye: look.eye || [70, 60, 50], beard: look.beard, elf: look.elf }), 'face' + rnd()),
   };
   const DS = m => { const c = m.clone(); c.side = THREE.DoubleSide; return c; };
@@ -103,21 +103,37 @@ function humanoid(S, look) {
   const W = S.W, drop = S.hip - (0.06 + S.thigh + S.shin);
   const root = new THREE.Group(); root.name = look.elf ? 'elfa' : 'abitante';
   const hips = joint(root, 'anca', 0, S.hip, 0);
-  // bacino e gonna (si allarga verso il basso)
-  LO(hips, [{ t: -0.06, w: S.waist * W, h: 0.115 * W }, { t: 0.04, w: S.hips * W, h: 0.13 * W }, { t: S.skirt * 0.55, w: S.hips * W * (1 + (S.flare - 1) * 0.6), h: 0.14 * W * (1 + (S.flare - 1) * 0.6) },
-    { t: S.skirt, w: S.hips * W * S.flare, h: 0.15 * W * S.flare }], [M.skirt, M.skirt], { radial: 16 });
+  // bacino e gonna: dalla vita i fianchi si allargano, poi la gonna scende e si apre; orlo con una fascia
+  const hipW = S.hips * W;
+  LO(hips, [{ t: -0.06, w: S.waist * W, h: 0.105 * W }, { t: -0.01, w: (S.waist + S.hips) / 2 * W, h: 0.115 * W }, { t: 0.05, w: hipW, h: 0.13 * W, oy: -0.008 },
+    { t: S.skirt * 0.55, w: hipW * (1 + (S.flare - 1) * 0.6), h: 0.14 * W * (1 + (S.flare - 1) * 0.6) }, { t: S.skirt, w: hipW * S.flare, h: 0.15 * W * S.flare }], [M.skirt, M.skirt], { radial: 18 });
+  LO(hips, taper(S.skirt - 0.045, S.skirt + 0.005, hipW * S.flare * 0.985 + 0.006, 0.15 * W * S.flare * 0.985 + 0.006, hipW * S.flare + 0.006, 0.15 * W * S.flare + 0.006, 0, 2), [M.trim, M.trim], { radial: 18 });
   const torso = joint(hips, 'busto', 0, 0.05, 0);
-  // busto: vita, petto, spalle, attacco del collo (sale verso l'alto: t negativi)
-  LO(torso, [{ t: 0.02, w: S.waist * W, h: 0.11 * W }, { t: -0.14, w: S.waist * W * 1.02, h: 0.115 * W }, { t: -0.3, w: S.chest * W, h: 0.13 * W, oy: 0.01 },
-    { t: -S.torso * 0.88, w: (S.chest + 0.02) * W, h: 0.115 * W }, { t: -S.torso, w: 0.13 * W, h: 0.08 * W }, { t: -S.torso - 0.03, w: 0.06, h: 0.05 }], [M.top, M.top], { radial: 16 });
-  LO(torso, taper(-0.005, -0.06, S.waist * W + 0.012, 0.118 * W + 0.012, S.waist * W + 0.012, 0.118 * W + 0.012, 0, 2), [M.belt, M.belt], { radial: 16 });
-  add(torso, new THREE.BoxGeometry(0.05, 0.045, 0.02), M.metal, 0, -0.03, 0.125 * W);
+  // busto: vita, schiena con la curva lombare, costato, petto, spalle, attacco del collo (sale verso l'alto: t negativi)
+  const ch = S.chest * W;
+  LO(torso, [{ t: 0.02, w: S.waist * W, h: 0.102 * W }, { t: -0.08, w: S.waist * W * 0.98, h: 0.098 * W, oy: -0.006 }, { t: -0.18, w: (S.waist + S.chest) / 2 * W, h: 0.11 * W, oy: 0.002 },
+    { t: -0.27, w: ch, h: 0.12 * W, oy: 0.012 }, { t: -0.34, w: ch * 1.03, h: (0.128 + 0.012 * S.bust) * W, oy: 0.018 }, { t: -S.torso * 0.88, w: ch + 0.025 * W, h: 0.112 * W, oy: -0.004 },
+    { t: -S.torso * 0.97, w: 0.12 * W, h: 0.078 * W }, { t: -S.torso - 0.03, w: 0.055, h: 0.05 }], [M.top, M.top], { radial: 18 });
+  if (S.bust) { // forme dell'elfa sotto l'abito, e corsetto di cuoio allacciato sul davanti
+    for (const sd of [-1, 1]) add(torso, new THREE.SphereGeometry(1, 14, 10), M.top, sd * 0.046 * W, S.torso - 0.17, 0.14 * W - 0.02).scale.set(0.064 * W, 0.054, 0.044);
+    LO(torso, [{ t: 0.0, w: S.waist * W + 0.008, h: 0.106 * W + 0.006 }, { t: -0.1, w: S.waist * W * 0.98 + 0.008, h: 0.1 * W + 0.006, oy: -0.004 }, { t: -0.2, w: (S.waist + S.chest) / 2 * W + 0.008, h: 0.112 * W + 0.006 },
+      { t: -0.25, w: ch * 0.97 + 0.006, h: 0.118 * W + 0.006, oy: 0.01 }], [M.leather, M.leather], { radial: 18 });
+    for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) { const l = add(torso, new THREE.BoxGeometry(0.045, 0.005, 0.004), M.trim, 0, 0.04 + k * 0.05, 0.106 * W + 0.012); l.rotation.z = sd * 0.6; }
+    { const sash = add(hips, new THREE.BoxGeometry(0.09, S.skirt * 0.95, 0.008), M.trim, 0, S.skirt * 0.47 - 0.02, hipW * 0.62 + 0.03 * S.flare); sash.rotation.x = -0.12; }  // fascia ricamata davanti
+  } else { // collo a V allacciato e bottoni della tunica
+    { const g = new THREE.ConeGeometry(0.05, 0.12, 3); g.rotateZ(PI); const v = add(torso, g, M.skin, 0, S.torso - 0.08, 0.118 * W); v.scale.set(1, 1, 0.12); }
+    for (let k = 0; k < 3; k++) add(torso, new THREE.SphereGeometry(0.008, 6, 4), M.metal, 0, 0.12 + k * 0.07, 0.132 * W + (k > 1 ? 0.006 : 0));
+  }
+  LO(torso, taper(-0.005, -0.06, S.waist * W + 0.014, 0.106 * W + 0.014, S.waist * W + 0.014, 0.104 * W + 0.014, 0, 2), [M.belt, M.belt], { radial: 18 });
+  add(torso, new THREE.BoxGeometry(0.05, 0.045, 0.02), M.metal, 0, -0.03, 0.106 * W + 0.022);
+  { const pouch = add(torso, new THREE.BoxGeometry(0.07, 0.08, 0.04), M.leather, 0.11 * W, -0.075, 0.07 * W); pouch.rotation.y = 0.5; add(pouch, new THREE.BoxGeometry(0.074, 0.03, 0.044), M.belt, 0, 0.03, 0.002); }
   if (look.strap) { const st = add(torso, new THREE.BoxGeometry(0.035, 0.6, 0.012), M.leather, 0.02, 0.24, 0.13 * W); st.rotation.z = 0.62;
     add(torso, new THREE.SphereGeometry(0.075, 8, 6), M.leather, -0.2 * W, 0.0, 0.07).scale.set(1, 0.85, 0.6); }
   // mantellina sulle spalle e mantello curvo che scende dietro
-  add(torso, new THREE.CylinderGeometry(0.12 * W, 0.27 * W, 0.13, 16, 1, true), DS(M.cloak), 0, S.torso - 0.05, 0);
+  if (look.elf) LO(torso, taper(-S.torso + 0.01, -S.torso - 0.06, 0.07, 0.065, 0.058, 0.055, 0, 2), [M.top, M.top], { radial: 14 });          // colletto alto
+  else add(torso, new THREE.CylinderGeometry(0.1 * W, 0.215 * W, 0.11, 16, 1, true), DS(M.cloak), 0, S.torso - 0.06, 0);                   // mantellina sulle spalle
   const cape = joint(torso, 'mantello', 0, S.torso, -0.04);
-  { const L = look.capeLen, g = new THREE.CylinderGeometry(0.2 * W, 0.3 * W + L * 0.08, L, 14, 4, true, PI * 0.58, PI * 0.84); g.translate(0, -L / 2, 0); add(cape, g, DS(M.cloak)); }
+  { const L = look.capeLen, g = new THREE.CylinderGeometry(0.15 * W, 0.2 * W + L * 0.07, L, 14, 4, true, PI * 0.55, PI * 0.9); g.translate(0, -L / 2, 0); add(cape, g, DS(M.cloak)); }
   // collo e testa
   const neck = joint(torso, 'collo', 0, S.torso + 0.01, 0);
   LO(neck, taper(-0.0, -S.neck - 0.03, 0.045, 0.048, 0.043, 0.046, 0, 3), [M.skin, M.skin], { radial: 10 });
@@ -143,34 +159,47 @@ function humanoid(S, look) {
   }
   if (look.elf) {
     // capelli lunghi che scendono sulla schiena, orecchie a punta, diadema
-    LO(head, [{ t: 0.0, w: 0.1, h: 0.05, oy: -0.08 }, { t: 0.2, w: 0.115, h: 0.045, oy: -0.1 }, { t: 0.45, w: 0.11, h: 0.035, oy: -0.115 }, { t: 0.62, w: 0.06, h: 0.02, oy: -0.12 }], [M.hair, M.hair], { radial: 12 }, 0, 0.06, 0);
+    LO(head, [{ t: -0.02, w: 0.08, h: 0.045, oy: -0.075 }, { t: 0.15, w: 0.088, h: 0.038, oy: -0.1 }, { t: 0.4, w: 0.08, h: 0.03, oy: -0.115 }, { t: 0.6, w: 0.045, h: 0.018, oy: -0.12 }], [M.hair, M.hair], { radial: 12 }, 0, 0.06, 0);
     for (const s of [-1, 1]) LO(head, [{ t: 0, w: 0.022, h: 0.016 }, { t: 0.14, w: 0.026, h: 0.014 }, { t: 0.3, w: 0.018, h: 0.01 }, { t: 0.36, w: 0.006, h: 0.004 }], [M.hair, M.hair], { radial: 8 }, s * 0.092 * hs, 0.17 * hs, 0.05 * hs);   // ciocche ai lati del viso
-    const ring = add(head, new THREE.TorusGeometry(0.122 * hs, 0.006, 4, 28), M.metal, 0, 0.2 * hs, 0); ring.rotation.x = PI / 2 - 0.25; ring.scale.set(1, 1.08, 1);
-    add(head, new THREE.OctahedronGeometry(0.014, 0), charMat(look.gem || 0x6ac8b0), 0, 0.182 * hs, 0.128 * hs);
+    const ring = add(head, new THREE.TorusGeometry(0.104 * hs, 0.005, 4, 28), M.metal, 0, 0.2 * hs, -0.004); ring.rotation.x = PI / 2 + 0.22; ring.scale.set(1, 1.17, 1);
+    add(head, new THREE.OctahedronGeometry(0.013, 0), charMat(look.gem || 0x6ac8b0), 0, 0.17 * hs, 0.123 * hs);
   } else {
     if (look.hat === 'cappuccio') { const h = add(head, new THREE.SphereGeometry(1, 16, 10, PI / 2 + 0.75, PI * 2 - 1.5, 0, PI * 0.75), DS(M.cloak), 0, 0.13, -0.01); h.scale.set(0.15, 0.17, 0.155); }
     if (look.hat === 'cappello') { add(head, new THREE.CylinderGeometry(0.24, 0.25, 0.022, 16), M.leather, 0, 0.255, 0); add(head, new THREE.CylinderGeometry(0.105, 0.13, 0.12, 12), M.leather, 0, 0.32, 0); }
   }
-  // braccia: manica che si allarga al polso, mano a muffola con il pollice
-  for (const s of [1, -1]) { const L = s > 0 ? 'S' : 'D';
+  // braccia: spalla tonda, bicipite, avambraccio che si assottiglia al polso, polsino, mano con quattro dita e pollice
+  for (const s of [1, -1]) { const L = s > 0 ? 'S' : 'D', aw = S.armW;
     const sh = joint(torso, 'spalla' + L, s * S.shoulder, S.torso - 0.04, 0);
-    LO(sh, taper(-0.03, S.upper + 0.02, 0.058 * S.armW, 0.062 * S.armW, 0.048 * S.armW, 0.052 * S.armW, 0.12, 5), [M.top, M.top]);
+    add(sh, new THREE.SphereGeometry(1, 12, 10), M.top, 0, -0.012, 0).scale.set(0.058 * aw, 0.062 * aw, 0.06 * aw);                                     // deltoide
+    if (look.elf) for (let k = 0; k < 2; k++) { const d = add(sh, new THREE.SphereGeometry(0.075 - k * 0.012, 12, 6, 0, PI * 2, 0, PI * 0.45), M.metal, s * 0.005, 0.012 - k * 0.04, 0); d.scale.set(1, 0.55, 1.12); d.rotation.z = -s * (0.25 + k * 0.2); }   // spallaccio a lamelle
+    LO(sh, [{ t: -0.03, w: 0.058 * aw, h: 0.06 * aw }, { t: 0.1, w: 0.056 * aw, h: 0.066 * aw, oy: 0.008 }, { t: S.upper * 0.8, w: 0.05 * aw, h: 0.054 * aw }, { t: S.upper + 0.02, w: 0.047 * aw, h: 0.05 * aw }], [M.top, M.top]);
     const el = joint(sh, 'gomito' + L, 0, -S.upper, 0);
-    LO(el, taper(-0.02, S.fore * 0.72, 0.047 * S.armW, 0.05 * S.armW, 0.052 * S.armW, 0.054 * S.armW, 0.05, 4), [M.top, M.top]);
-    LO(el, taper(S.fore * 0.62, S.fore + 0.01, 0.034 * S.armW, 0.036 * S.armW, 0.03 * S.armW, 0.032 * S.armW, 0, 3), [M.skin, M.skin], { radial: 8 });
-    add(el, new THREE.SphereGeometry(1, 10, 8), M.skin, 0, -S.fore - 0.04, 0.005).scale.set(0.034 * S.armW, 0.055, 0.045);
-    { const th = add(el, new THREE.SphereGeometry(1, 6, 5), M.skin, -s * 0.03 * S.armW, -S.fore - 0.025, 0.03); th.scale.set(0.014, 0.03, 0.014); }
-    if (look.elf) LO(el, taper(S.fore * 0.45, S.fore * 0.7, 0.05 * S.armW, 0.054 * S.armW, 0.05 * S.armW, 0.054 * S.armW, 0, 2), [M.leather, M.leather]);   // bracciale
-    // gambe: coscia, stinco, stivale col gambale e piede
-    const hp = joint(hips, 'coscia' + L, s * 0.092 * W, -0.06, 0);
-    LO(hp, taper(-0.04, S.thigh + 0.02, 0.072 * S.legW, 0.078 * S.legW, 0.054 * S.legW, 0.058 * S.legW, 0.1, 5), [M.trous, M.trous]);
+    LO(el, [{ t: -0.025, w: 0.048 * aw, h: 0.05 * aw }, { t: 0.06, w: 0.052 * aw, h: 0.054 * aw, oy: 0.004 }, { t: S.fore * 0.72, w: 0.043 * aw, h: 0.045 * aw }], [M.top, M.top]);
+    if (look.elf) { const g = new THREE.CylinderGeometry(0.046 * aw, 0.085 * aw, 0.15, 14, 1, true); g.translate(0, -S.fore * 0.66, 0); add(el, g, DS(M.top));                    // manica a campana
+      LO(el, taper(S.fore * 0.38, S.fore * 0.58, 0.046 * aw, 0.049 * aw, 0.043 * aw, 0.046 * aw, 0, 2), [M.leather, M.leather]); }                                      // bracciale
+    else LO(el, taper(S.fore * 0.64, S.fore * 0.74, 0.048 * aw, 0.05 * aw, 0.048 * aw, 0.05 * aw, 0, 2), [M.trim, M.trim]);                                         // polsino
+    LO(el, taper(S.fore * 0.66, S.fore + 0.01, 0.033 * aw, 0.035 * aw, 0.028 * aw, 0.031 * aw, 0, 3), [M.skin, M.skin], { radial: 8 });
+    const hand = joint(el, '', 0, -S.fore - 0.005, 0);
+    add(hand, new THREE.SphereGeometry(1, 10, 8), M.skin, 0, -0.035, 0.004).scale.set(0.022 * aw, 0.042, 0.04);                                          // palmo
+    for (let k = 0; k < 4; k++) { const f = joint(hand, '', 0, -0.07, 0.03 - k * 0.02); f.rotation.z = -s * (0.25 + k * 0.05);                                    // dita leggermente piegate
+      const g = new THREE.CylinderGeometry(0.0075, 0.0085, 0.045 - Math.abs(k - 1.5) * 0.006, 6); g.translate(0, -0.02, 0); add(f, g, M.skin);
+      add(f, new THREE.SphereGeometry(0.0075, 6, 4), M.skin, 0, -0.043 + Math.abs(k - 1.5) * 0.006, 0); }
+    { const t = joint(hand, '', -s * 0.012, -0.03, 0.035); t.rotation.set(0.5, 0, s * 0.5); const g = new THREE.CylinderGeometry(0.008, 0.01, 0.04, 6); g.translate(0, -0.02, 0); add(t, g, M.skin); }   // pollice
+    // gambe: coscia con il quadricipite, rotula, polpaccio, stivale con gambale, lacci e suola
+    const lw = S.legW, hp = joint(hips, 'coscia' + L, s * (0.088 + 0.02 * S.bust) * W, -0.06, 0);
+    LO(hp, [{ t: -0.05, w: (0.074 + 0.012 * S.bust) * lw, h: 0.08 * lw }, { t: 0.1, w: (0.074 + 0.006 * S.bust) * lw, h: 0.084 * lw, oy: 0.01 }, { t: S.thigh * 0.62, w: 0.064 * lw, h: 0.07 * lw, oy: 0.006 },
+      { t: S.thigh * 0.9, w: 0.056 * lw, h: 0.06 * lw }, { t: S.thigh + 0.02, w: 0.054 * lw, h: 0.058 * lw }], [M.trous, M.trous], { radial: 14 });
     const kn = joint(hp, 'ginocchio' + L, 0, -S.thigh, 0);
-    LO(kn, taper(-0.03, S.shin * 0.55, 0.054 * S.legW, 0.06 * S.legW, 0.046 * S.legW, 0.052 * S.legW, 0.08, 4), [M.trous, M.trous]);
-    const bootTop = look.elf ? 0.05 : S.shin * 0.45;
-    LO(kn, [{ t: bootTop, w: 0.062 * S.legW, h: 0.068 * S.legW }, { t: S.shin * 0.8, w: 0.052 * S.legW, h: 0.058 * S.legW }, { t: S.shin + 0.02, w: 0.05 * S.legW, h: 0.056 * S.legW }], [M.leather, M.leather]);
-    LO(kn, taper(bootTop - 0.02, bootTop + 0.02, 0.068 * S.legW, 0.074 * S.legW, 0.068 * S.legW, 0.074 * S.legW, 0, 2), [M.leather, M.leather]);   // risvolto
-    add(kn, loft([{ t: -0.08, w: 0.05, h: 0.045, oy: 0 }, { t: 0.0, w: 0.058 * S.legW, h: 0.05, oy: 0 }, { t: 0.12, w: 0.055 * S.legW, h: 0.04, oy: -0.01 }, { t: 0.17 * (look.elf ? 1.05 : 1), w: 0.035, h: 0.028, oy: -0.02 }], { radial: 10, belly: [2, 2] }),
-      [M.leather, M.leather], 0, -S.shin - drop + 0.05, 0.03);
+    add(kn, new THREE.SphereGeometry(1, 8, 6), M.trous, 0, 0.0, 0.045 * lw).scale.set(0.034 * lw, 0.038, 0.022);                                          // rotula
+    LO(kn, [{ t: -0.03, w: 0.052 * lw, h: 0.058 * lw }, { t: 0.1, w: 0.054 * lw, h: 0.066 * lw, oy: -0.012 }, { t: S.shin * 0.6, w: 0.045 * lw, h: 0.05 * lw }], [M.trous, M.trous], { radial: 14 });
+    const bootTop = look.elf ? 0.04 : S.shin * 0.45;
+    LO(kn, [{ t: bootTop, w: 0.062 * lw, h: 0.068 * lw }, { t: S.shin * 0.8, w: 0.052 * lw, h: 0.058 * lw, oy: -0.004 }, { t: S.shin + 0.02, w: 0.05 * lw, h: 0.056 * lw }], [M.leather, M.leather], { radial: 14 });
+    LO(kn, taper(bootTop - 0.02, bootTop + 0.02, 0.068 * lw, 0.074 * lw, 0.068 * lw, 0.074 * lw, 0, 2), [M.leather, M.leather]);   // risvolto
+    for (let k = 0; k < 3; k++) for (const sd of [-1, 1]) { const l = add(kn, new THREE.BoxGeometry(0.05 * lw, 0.004, 0.004), M.trim, 0, -(bootTop + 0.05 + k * (S.shin - bootTop - 0.05) / 3), 0.06 * lw); l.rotation.z = sd * 0.55; }   // lacci
+    const fy = -S.shin - drop + 0.05;
+    add(kn, loft([{ t: -0.08, w: 0.05, h: 0.045, oy: 0 }, { t: 0.0, w: 0.058 * lw, h: 0.05, oy: 0 }, { t: 0.12, w: 0.055 * lw, h: 0.04, oy: -0.01 }, { t: 0.17 * (look.elf ? 1.05 : 1), w: 0.035, h: 0.028, oy: -0.02 }], { radial: 10, belly: [2, 2] }),
+      [M.leather, M.leather], 0, fy, 0.03);
+    { const sole = add(kn, new THREE.BoxGeometry(0.105 * lw, 0.018, 0.25), M.belt, 0, fy - 0.045, 0.045); sole.scale.x = 1; }                                // suola
   }
   return { root, anim: animator(root, villagerClips({ hip: S.hip, stride: look.elf ? 1.08 : 1, arm: look.elf ? 0.75 : 1 })) };
 }
@@ -190,7 +219,7 @@ export function elf() {
   return humanoid(ELF, {
     elf: true, fine: true, skin: pick([[236, 214, 196], [214, 184, 156], [150, 110, 86], [244, 226, 212]]), hair: pick([0xe8dcb0, 0xc8c8c4, 0x8a3a20, 0x1e1a1a, 0xd8b070]),
     eye: pick([[90, 150, 90], [110, 90, 170], [70, 130, 170], [170, 130, 60]]), top: pal[0], skirt: pal[0], cloak: pal[1], gem: pal[2],
-    trous: 0x3a3430, boots: 0x5a4632, metal: 0xc8c8c0, capeLen: 1.15,
+    trous: 0x3a3430, boots: 0x5a4632, metal: 0xc8c8c0, trim: 0xc8a050, capeLen: 1.15,
   });
 }
 

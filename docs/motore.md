@@ -84,6 +84,10 @@ I moduli ES non si caricano da `file://`. Servi la cartella `engine` con un serv
 
 `engine/demo/personaggi.html`: un abitante e un gatto con i pulsanti per ogni animazione; "Un altro" genera una variante. `engine/demo/drago.html`: il drago in un prato; tu sei l'abitante e ti muovi in terza persona.
 
+## Anteprime senza browser
+
+`engine/tools/anteprima/` disegna un personaggio di fronte, di profilo e di tre quarti senza GPU (vedi il README lì): serve a controllare forme e proporzioni prima di pubblicare.
+
 ## Test
 
 `cd engine && npm test` esegue la demo in Node (aggiungi `personaggi.js` per la pagina dei personaggi) con un finto three (`test/three-stub.mjs`). `node --import ./test/register.mjs test/smoke.mjs --notte` fa lo stesso per la notte.
