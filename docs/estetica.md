@@ -155,3 +155,46 @@ Tutti i colori passano da `mute()` (desatura del 20%, scurisce un poco). Valori 
 - Particelle e vegetazione minuta con **InstancedMesh** (`frustumCulled=false` se le istanze sono sparse).
 - Foglie su card con alphaTest, senza ombre (`castShadow=false`).
 - Massimo 8 PointLight e solo per pixel; controllare il limite di uniform del dispositivo (vedi `docs/errori-noti.md`).
+
+---
+
+## 9. Interni (Locanda del Boccale, `scene/locanda.html`)
+
+Valgono tutte le regole sopra; qui ci sono solo le differenze per le scene al chiuso, ricavate dalla locanda.
+
+### Luce: "luci soffuse"
+- **Luce di fondo poca e un po' fredda** (`Hemisphere #4c4e5a/#1c140e 0.46`, `Ambient #2a2a32 0.26`): è la notte che entra dalle finestre. Le ombre virano al freddo, le zone illuminate restano calde (contrasto caldo/freddo).
+- Le **sorgenti sono tutte calde ma non sature** (fuoco `#ff9448`, lampadario `#ffbe78`, lanterne `#ffb460`, candele `#ffbc68`): con colori troppo arancio tutto l'intonaco diventa arancio e si perde la gerarchia dei valori.
+- **Due luci fisse con le ombre**: il fuoco del camino e il lampadario. Le loro mappe d'ombra si calcolano solo nei primi fotogrammi (`shadowMap.autoUpdate=false`), perché la scena è ferma.
+- **Le altre luci a rotazione** (*light culling*): fino a 6 PointLight assegnate a ogni fotogramma alle sorgenti più importanti. Il punteggio è intensità × visibilità della stanza / distanza². Le luci senza ombra passano attraverso i muri, quindi una sorgente in un'altra stanza conta poco o niente (tabella `VIS`). Quando una luce cambia sorgente si spegne e si riaccende in dissolvenza; quando si cambia punto di vista si assegnano subito.
+- Telefoni con pochi uniform: niente ombre, 2 o 4 luci a rotazione con la precedenza al fuoco e al lampadario, luce di fondo +0,15.
+- Le luci finte completano quelle vere (come la notte, §5): **fiamme a pixel** (shader con griglia di pixel, billboard cilindrico), **aloni**, **pozze di luce** sui pavimenti e sui tavoli. Sui muri le pozze vanno tenute debolissime: viste di sbieco "bruciano".
+- Vetri delle lanterne e lanterne di carta sono `MeshBasicMaterial` con la fiamma dipinta nella texture: il bagliore le prende.
+- Nessuna superficie grande deve arrivare al bianco: l'intonaco d'interno è più scuro (`#c2b8a8`), quello di cucina e delle cappe più affumicato (`#a89c88`).
+
+### Usura d'interno (`wear()` della locanda)
+- Lo sporco sale dal **pavimento del proprio piano** (al piano di sopra si misura dal solaio, non da terra).
+- Al posto del muschio c'è la **fuliggine**: travi, soffitti e parte alta dei muri si scuriscono salendo (×0,6 verso il colmo).
+- Colature di fumo e grasso più rade di quelle della pioggia; grana e macchie come fuori.
+
+### Atmosfera
+- Al posto della foschia bassa c'è il **fumo che ristagna sotto il tetto**: nel post-processing, sopra i 3,4 m l'immagine sfuma verso `#2a2018`. In più ci sono banchi di fumo morbidi scaldati dal lampadario.
+- **Pulviscolo** che brilla solo vicino alle luci, **faville** del fuoco, **vapore** del paiolo, rivoli di pioggia sui vetri, lanterne di carta che dondolano nella corrente.
+- Nebbia `FogExp2(#1d1712, 0.04)`: dà profondità anche in pochi metri.
+- Riflessi (SSR) solo dove c'è qualcosa di bagnato o lucido: piano del bancone (0,9), birra versata, pozza all'ingresso, acqua nel catino e nella botte (0,5), impronte bagnate (0,72). Increspatura molto più debole che fuori.
+- Bagliore (*bloom*) con soglia 0,55→0,95 e mix 0,8: devono sbavare le fiamme, non i muri.
+
+### Proporzioni d'interno
+- Alzata 0,20 m, pedata 0,28 m, ringhiera 1,0 m, piano a 3,0 m, intradosso delle travi a 2,49 m.
+- Tavolo 0,76 m, seduta di panche e sgabelli 0,45 m, bancone 1,06 m, letto 2,0×1,4 m, porta 0,9–1,0×2,0 m.
+- Occhi a 1,62 m; si cammina a 2,2 m/s (4,2 di corsa).
+
+### Palette d'interno (in più a §2, sempre con `mute()`)
+| Ruolo | Colori |
+|---|---|
+| Legni dei mobili | `#6a4a32 #5e4230 #74523a #664632`, piani `#7a5a3e`, legno scuro `#4a3424` |
+| Intonaci d'interno | `#c2b8a8`, cucina e cappe `#a89c88` |
+| Peltro, ottone | `#8a8478`, `#b08a48` |
+| Ceramiche | `#c8b89a #a0583a #8a6a4a #b8a888` |
+| Vetro delle bottiglie | `#2f4a30 #5a3a1a #34404a #4a2a2e #3a4a2a` |
+| Tessuti (accenti piccoli) | trapunta `#963a30 #a88242 #4a5c3a #3e4e68 #c4b8a0 #6e4c34`, tappeto `#8c2a24 #2c3c5a #b08a48 #beb096`, mantelli `#3c4634 #5a4028` |

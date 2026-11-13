@@ -7,10 +7,10 @@ description: Applica l'estetica del gioco (Valfiorita sotto la pioggia, pixel-ar
 
 Prima di scrivere codice grafico:
 
-1. Leggi `docs/estetica.md`: principi, palette, texture, materiali, luce, post-processing.
+1. Leggi `docs/estetica.md`: principi, palette, texture, materiali, luce, post-processing. Per una scena al chiuso leggi anche §9 (interni).
 2. Se crei un oggetto, cerca la sua ricetta in `docs/oggetti.md`; se non c'è, segui le regole comuni in cima a quel file e aggiungi la ricetta nuova al file.
 3. Leggi `docs/errori-noti.md` per evitare le trappole già incontrate.
-4. Usa `reference/valfiorita-pioggia.html` come implementazione di riferimento: riusa le funzioni (`pix`, `wear`, `hangSign`, `tree`, `flower`, `bench`, ecc.) invece di riscriverle.
+4. Usa `reference/valfiorita-pioggia.html` come implementazione di riferimento: riusa le funzioni (`pix`, `wear`, `hangSign`, `tree`, `flower`, `bench`, ecc.) invece di riscriverle. Per gli interni il riferimento è `scene/locanda.html` (luci a rotazione, fiamme, candele, mobili, `wear()` con la fuliggine).
 
 ## Controlli prima di consegnare
 - Nessuna forma primitiva nuda come forma finale; parti separate e leggibili.
@@ -20,4 +20,4 @@ Prima di scrivere codice grafico:
 - Proporzioni reali (vedi §6).
 - Funziona su telefono: niente TDZ, luci entro il limite, pagina con il riquadro degli errori.
 - Spiega all'autore i nomi delle tecniche usate (l'autore lo chiede sempre) e rispondi in italiano.
-- Se non puoi vedere il render, dillo esplicitamente.
+- Guarda il render con `node tools/anteprima.js` (vedi `docs/errori-noti.md`) da più punti di vista. Se non puoi vederlo, dillo esplicitamente.
