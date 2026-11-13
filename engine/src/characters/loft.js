@@ -18,8 +18,10 @@ export function loft(sections, opts) {
   const per = sections.reduce((a, s) => a + Math.PI * (s.w + s.h), 0) / sections.length;
   const uRep = opts.tile ? Math.max(1, Math.round(per / opts.tile[0])) : (opts.uRep || 3), vRep = opts.tile ? len / opts.tile[1] : (opts.vRep || len / 0.55);
   const pos = [], uv = [], col = [], top = [], bot = [], C = opts.color || (() => [1, 1, 1]);
-  const P = (s, a) => { const sx = Math.sin(a * Math.PI * 2), cy = Math.cos(a * Math.PI * 2);
-    const x = Math.sign(sx) * Math.pow(Math.abs(sx), R) * s.w, u = Math.sign(cy) * Math.pow(Math.abs(cy), R) * s.h + (s.oy || 0);
+  // bumps: rigonfiamenti morbidi della sezione [angolo in giri (0 = davanti/alto), quantità, ampiezza in giri]: la forma resta un pezzo solo
+  const bump = (s, a) => { let k = 1; for (const [a0, amt, sg] of (s.bumps || [])) { let d = a - a0; d -= Math.round(d); k += amt * Math.exp(-(d / sg) * (d / sg)); } return k; };
+  const P = (s, a) => { const sx = Math.sin(a * Math.PI * 2), cy = Math.cos(a * Math.PI * 2), b = bump(s, a);
+    const x = Math.sign(sx) * Math.pow(Math.abs(sx), R) * s.w * b, u = Math.sign(cy) * Math.pow(Math.abs(cy), R) * s.h * b + (s.oy || 0);
     return axis === 'z' ? [x, u, s.t] : [x, -s.t, u]; };
   sections.forEach((s, j) => { const f = j / (sections.length - 1); for (let i = 0; i <= N; i++) { pos.push(...P(s, i / N)); uv.push(i / N * uRep, Math.abs(s.t - sections[0].t) / len * vRep); col.push(...C(s.t, i / N, f)); } });
   const row = N + 1, rev = sections[sections.length - 1].t < sections[0].t;   // percorso al contrario: si inverte l'avvolgimento

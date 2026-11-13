@@ -146,13 +146,14 @@ function humanoid(S, look) {
   const torso = joint(hips, 'busto', 0, 0.05, 0);
   // busto: vita, schiena con la curva lombare, costato, petto, spalle, attacco del collo (sale verso l'alto: t negativi)
   const ch = S.chest * W;
+  const bp = (k) => S.bust ? [[0.085, 0.25 * k, 0.062], [-0.085, 0.25 * k, 0.062]] : [];           // petto: due rigonfiamenti nella stessa sezione
   LO(torso, [{ t: 0.02, w: S.waist * W, h: 0.102 * W }, { t: -0.08, w: S.waist * W * 0.98, h: 0.098 * W, oy: -0.006 }, { t: -0.18, w: (S.waist + S.chest) / 2 * W, h: 0.11 * W, oy: 0.002 },
-    { t: -0.27, w: ch, h: 0.12 * W, oy: 0.012 }, { t: -0.34, w: ch * 1.03, h: (0.128 + 0.012 * S.bust) * W, oy: 0.018 }, { t: -S.torso * 0.88, w: ch + 0.025 * W, h: 0.112 * W, oy: -0.004 },
-    { t: -S.torso * 0.97, w: 0.12 * W, h: 0.078 * W }, { t: -S.torso - 0.03, w: 0.055, h: 0.05 }], [M.top, M.top], { radial: 18 });
-  if (S.bust) { // forme dell'elfa sotto l'abito, e corsetto di cuoio allacciato sul davanti
-    for (const sd of [-1, 1]) add(torso, new THREE.SphereGeometry(1, 14, 10), M.top, sd * 0.046 * W, S.torso - 0.17, 0.14 * W - 0.02).scale.set(0.064 * W, 0.054, 0.044);
+    { t: -0.24, w: ch * 0.97, h: 0.116 * W, oy: 0.008, bumps: bp(0.15) }, { t: -0.28, w: ch, h: 0.12 * W, oy: 0.012, bumps: bp(0.75) }, { t: -0.315, w: ch * 1.02, h: 0.124 * W, oy: 0.016, bumps: bp(1) },
+    { t: -0.35, w: ch * 1.03, h: 0.126 * W, oy: 0.018, bumps: bp(0.8) }, { t: -0.39, w: ch * 1.03, h: 0.122 * W, oy: 0.012, bumps: bp(0.35) },
+    { t: -S.torso * 0.88, w: ch + 0.025 * W, h: 0.112 * W, oy: -0.004 }, { t: -S.torso * 0.97, w: 0.12 * W, h: 0.078 * W }, { t: -S.torso - 0.03, w: 0.055, h: 0.05 }], [M.top, M.top], { radial: 32 });
+  if (S.bust) { // corsetto di cuoio allacciato sul davanti, che segue la base del petto
     LO(torso, [{ t: 0.0, w: S.waist * W + 0.008, h: 0.106 * W + 0.006 }, { t: -0.1, w: S.waist * W * 0.98 + 0.008, h: 0.1 * W + 0.006, oy: -0.004 }, { t: -0.2, w: (S.waist + S.chest) / 2 * W + 0.008, h: 0.112 * W + 0.006 },
-      { t: -0.25, w: ch * 0.97 + 0.006, h: 0.118 * W + 0.006, oy: 0.01 }], [M.leather, M.leather], { radial: 18 });
+      { t: -0.245, w: ch * 0.97 + 0.006, h: 0.116 * W + 0.006, oy: 0.008, bumps: bp(0.2) }], [M.leather, M.leather], { radial: 32 });
     for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) { const l = add(torso, new THREE.BoxGeometry(0.045, 0.005, 0.004), M.trim, 0, 0.04 + k * 0.05, 0.106 * W + 0.012); l.rotation.z = sd * 0.6; }
   } else { // collo a V allacciato e bottoni della tunica
     { const g = new THREE.ConeGeometry(0.05, 0.12, 3); g.rotateZ(PI); const v = add(torso, g, M.skin, 0, S.torso - 0.08, 0.118 * W); v.scale.set(1, 1, 0.12); }

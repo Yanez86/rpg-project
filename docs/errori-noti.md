@@ -33,3 +33,4 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 - La prova di fumo ora usa geometrie e attributi "veri a metà" (`test/three-stub.mjs`): un attributo mai creato o una geometria vuota fanno fallire il test come nel browser.
 - **Deformazioni a soglia**: una condizione secca (`if (z > 0.2)`) o un peso lineare che parte di colpo dentro una deformazione crea una cresta visibile nell'ombreggiatura (l'effetto "maschera" sulla testa). Usare pesi raccordati (smoothstep) e compressioni con derivata continua.
 - La forma delle teste si controlla senza browser: si esegue `shapeHead` in Node su una sfera e si disegna con un piccolo rasterizzatore in Python (vista frontale, di profilo e di tre quarti).
+- **Forme del corpo con pezzi separati**: sfere appoggiate su un busto (per petto, muscoli) si vedono come elementi estranei. Modellare la forma dentro la sezione del loft (`bumps`), così la superficie resta una sola.

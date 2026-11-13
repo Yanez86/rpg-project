@@ -69,7 +69,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
 | `characters/villager.js` | `villager()`, `elf()`, `villagerClips({hip, stride, arm})` | umanoidi morbidi (abitante, elfa): `fermo`, `cammina`, `corre`, `saluta` |
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
-| `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre" |
+| `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre"; `bumps` per rigonfiamenti morbidi dentro la stessa sezione |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
 | `controls/thirdPerson.js` | `thirdPerson({canvas, actor, walk, run, collide, stick, knob, actions})` | muovi un personaggio in terza persona; clip automatiche `fermo`/`cammina`/`corre`, azioni da tasto (es. E → `saluta`) |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
