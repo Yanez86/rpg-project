@@ -104,10 +104,11 @@ Regole comuni: proporzioni reali, parti separate, materiali con usura, nessuna s
 ## Drago — `dragon()`
 - Scala: testa a circa 8,7 m (cinque volte l'abitante), corpo lungo circa 7 m, apertura alare circa 17 m.
 - Giunti: `corpo`, `collo0…collo5`, `testa`, `mascella`, `coda0…coda9`, `zampaAS/AD/PS/PD`, `gambaAS/AD/PS/PD`, `piedeAS/AD/PS/PD`, `alaS/D`, `avambraccioS/D`, `manoS/D`, `ditoS1…4` e `ditoD1…4`.
-- Corpo in tre blocchi; scaglie embricate in pixel-art sopra, placche del ventre sotto (faccia −y).
+- **Forme organiche con il loft** (`characters/loft.js`): ogni pezzo è una sezione ellittica che scorre lungo un asse cambiando larghezza e altezza, con un rigonfiamento a metà per i muscoli. Niente parallelepipedi: corpo con fianchi, ventre e petto; anelli di collo e coda affusolati che si sovrappongono; cosce muscolose; testa con cranio e muso in un solo pezzo.
+- Scaglie embricate in pixel-art sopra, placche del ventre sotto (secondo gruppo di materiale del loft).
 - Cresta dorsale di spine dalla testa alla punta della coda; coda che si assottiglia e finisce a losanga.
-- Testa con muso, arcate sopraccigliari, occhi ambra luminosi, narici, denti sopra e sotto, lingua, corna ricurve in tre segmenti, spine sulle guance.
-- Zampe in tre segmenti (quelle posteriori digitigrade) con tre artigli.
+- Testa con cranio e muso affusolato, arcate sopraccigliari, occhi ambra a mandorla con palpebra, narici, zanne più lunghe davanti, lingua, due paia di corna ricurve in quattro segmenti, frangia di spine sulle guance.
+- Zampe in tre segmenti (quelle posteriori digitigrade), piede con tre dita in avanti e uno sperone dietro, ognuno col suo artiglio ricurvo; muscoli di spalle e cosce attaccati al corpo.
 - Ali: omero, avambraccio, mano con artiglio, quattro dita. La **membrana** è una mesh ricalcolata a ogni frame dalle posizioni delle ossa (`update()`), con il bordo d'uscita a festone. In Godot va rifatta come mesh con scheletro (skinning).
 - Varianti: cremisi, verde bronzo, ardesia, nero.
 - Clip: `fermo` (respiro lento, collo e coda che ondeggiano, ali chiuse), `cammina` (2,4 s, passo laterale), `ruggisce` (si impenna, apre la mascella e le ali), `vola` (battito d'ali, zampe raccolte, si alza di circa 4 m).

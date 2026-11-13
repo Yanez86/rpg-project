@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { rnd, pick, hn } from '../core/rng.js';
 import { PI } from '../core/geometry.js';
 import { joint, piece, charMat, charTex, makeClip, animator } from './puppet.js';
+import { loft, taper } from './loft.js';
 import { mute } from '../materials/palette.js';
 
 const HIDES = [ // [scaglie, ventre, membrana, corna]
@@ -36,60 +37,84 @@ export function dragon() {
     sc: charMat(cS, tx.scales), be: charMat(cB, tx.belly), horn: charMat(cH, tx.horn), claw: charMat(0x2a2622), tooth: charMat(0xe8e0cc), tongue: charMat(0x7a2a2a),
     dark: charMat(new THREE.Color(cS).multiplyScalar(0.6).getHex(), tx.scales), eye: new THREE.MeshBasicMaterial({ color: 0xffb040 }),
   };
-  const body6 = [M.sc, M.sc, M.sc, M.be, M.sc, M.sc];           // ventre sulla faccia −y
+  const SB = [M.sc, M.be], NOB = { belly: [2, 2] };
+  const LO = (parent, sections, opts, mats, x, y, z) => { const m = new THREE.Mesh(loft(sections, opts), mats || SB); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
   const root = new THREE.Group(); root.name = 'drago';
   const corpo = joint(root, 'corpo', 0, 3.7, 0);
-  piece(corpo, 2.5, 2.4, 5.4, body6, 0, 0, 0);
-  piece(corpo, 2.3, 2.3, 1.7, body6, 0, 0.15, 2.8); piece(corpo, 2.2, 2.1, 1.6, body6, 0, 0.05, -2.8);
-  const spike = (p, x, y, z, h, r, rx) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 4), M.dark); c.position.set(x, y, z); c.rotation.set(rx || -0.5, PI / 4, 0); c.castShadow = true; p.add(c); return c; };
-  for (let z = -3.2; z <= 3.4; z += 0.65) spike(corpo, 0, 1.25, z, 0.7 + 0.25 * Math.cos(z * 0.4), 0.22);
-  // collo: sei anelli che salgono in avanti
+  // corpo: fianchi stretti, ventre, petto profondo, spalle che salgono verso il collo
+  LO(corpo, [
+    { t: -3.75, w: 0.62, h: 0.62, oy: 0.25 }, { t: -3.2, w: 0.95, h: 0.95, oy: 0.18 }, { t: -2.5, w: 1.18, h: 1.12, oy: 0.12 }, { t: -1.6, w: 1.16, h: 1.1, oy: 0.02 },
+    { t: -0.5, w: 1.12, h: 1.18, oy: -0.08 }, { t: 0.6, w: 1.2, h: 1.26, oy: -0.08 }, { t: 1.7, w: 1.32, h: 1.34, oy: 0.0 }, { t: 2.7, w: 1.26, h: 1.3, oy: 0.14 },
+    { t: 3.4, w: 1.0, h: 1.05, oy: 0.36 }, { t: 3.95, w: 0.66, h: 0.66, oy: 0.58 }], { radial: 16, round: 0.85, vRep: 14 });
+  // muscoli delle spalle e delle cosce che si attaccano al corpo
+  for (const s of [-1, 1]) { LO(corpo, taper(-0.6, 0.7, 0.5, 0.55, 0.42, 0.45, 0.25, 5), { radial: 10 }, null, s * 1.05, -0.15, 2.3); LO(corpo, taper(-0.9, 0.8, 0.6, 0.7, 0.5, 0.55, 0.3, 5), { radial: 10 }, null, s * 1.05, -0.1, -2.35); }
+  const spike = (p, x, y, z, h, r, rx) => { const g = new THREE.ConeGeometry(r, h, 6); g.translate(0, h / 2, 0); const c = new THREE.Mesh(g, M.dark); c.position.set(x, y, z); c.rotation.set(rx ?? -0.55, 0, 0); c.castShadow = true; p.add(c); return c; };
+  for (let z = -3.4; z <= 3.6; z += 0.55) { const k = 1 - Math.abs(z - 0.6) / 4.6; spike(corpo, 0, 1.1 + 0.15 * k, z, 0.45 + 0.4 * k, 0.16 + 0.06 * k); }
+  // collo: sei anelli affusolati che si sovrappongono, ognuno con la sua spina
   let p = joint(corpo, 'collo0', 0, 0.6, 3.5);
-  for (let i = 0; i < 6; i++) { const w = 1.35 - i * 0.1; piece(p, w, w * 0.92, 1.05, body6, 0, 0, 0.47); spike(p, 0, w * 0.48, 0.45, 0.5 - i * 0.04, 0.16);
+  for (let i = 0; i < 6; i++) { const w0 = (1.36 - i * 0.1) / 2, w1 = (1.26 - i * 0.1) / 2;
+    LO(p, taper(-0.18, 1.12, w0 * 1.05, w0, w1 * 1.05, w1, 0.06, 5), { radial: 12, vRep: 3 });
+    spike(p, 0, w0 * 0.9, 0.45, 0.42 - i * 0.03, 0.12);
     p = joint(p, i < 5 ? 'collo' + (i + 1) : 'testa', 0, 0, 0.95); }
   const head = p;
-  piece(head, 1.0, 0.85, 1.3, [M.sc, M.sc, M.sc, M.be, M.sc, M.sc], 0, 0.15, 0.55);
-  piece(head, 0.72, 0.48, 1.15, [M.sc, M.sc, M.sc, M.be, M.sc, M.sc], 0, 0.02, 1.65);
+  // testa: cranio, fronte, muso che si assottiglia; la mascella è a parte
+  LO(head, [
+    { t: -0.15, w: 0.36, h: 0.36, oy: 0.12 }, { t: 0.2, w: 0.5, h: 0.46, oy: 0.18 }, { t: 0.7, w: 0.52, h: 0.44, oy: 0.2 }, { t: 1.1, w: 0.44, h: 0.36, oy: 0.12 },
+    { t: 1.55, w: 0.36, h: 0.28, oy: 0.05 }, { t: 2.0, w: 0.31, h: 0.23, oy: 0.02 }, { t: 2.3, w: 0.24, h: 0.17, oy: 0.0 }, { t: 2.42, w: 0.12, h: 0.09, oy: -0.02 }], { radial: 14, round: 0.8, vRep: 5 });
   for (const s of [-1, 1]) {
-    piece(head, 0.26, 0.16, 0.7, M.dark, s * 0.38, 0.62, 0.85, [0.15, s * 0.15, 0]);                         // arcata sopraccigliare
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.16), M.eye); eye.position.set(s * 0.5, 0.42, 1.0); head.add(eye);
-    piece(head, 0.08, 0.06, 0.06, M.claw, s * 0.2, 0.18, 2.2);                                                 // narici
-    for (let k = 0; k < 5; k++) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 4), M.tooth); t.position.set(s * 0.3, -0.27, 1.3 + k * 0.2); t.rotation.x = PI; head.add(t); }
-    // corna: tre coni che si piegano all'indietro e verso il basso
-    let hp = joint(head, '', s * 0.34, 0.55, 0.25); hp.rotation.set(-1.9, s * 0.35, 0);
-    for (let k = 0; k < 3; k++) { const L = 0.75 - k * 0.15; const c = new THREE.Mesh(new THREE.ConeGeometry(0.17 - k * 0.05, L, 5, 1, k < 2), M.horn); c.position.y = L / 2; c.castShadow = true; hp.add(c);
-      const n = joint(hp, '', 0, L * 0.92, 0); n.rotation.x = 0.45; hp = n; }
-    for (let k = 0; k < 3; k++) spike(head, s * 0.52, 0.05 - k * 0.12, 0.05 - k * 0.1, 0.4, 0.08, -1.6).rotation.z = s * 0.4;   // spine delle guance
+    LO(head, taper(0.35, 1.25, 0.1, 0.09, 0.07, 0.06, 0.3, 4), { radial: 6 }, [M.dark, M.dark], s * 0.36, 0.55, 0);           // arcata sopraccigliare
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), M.eye); eye.scale.set(0.5, 0.8, 1.4); eye.position.set(s * 0.43, 0.38, 1.0); head.add(eye);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.22), M.dark); lid.position.set(s * 0.45, 0.45, 1.0); lid.rotation.z = s * 0.3; head.add(lid);
+    const nos = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), M.claw); nos.scale.set(1, 0.5, 1.4); nos.position.set(s * 0.15, 0.2, 2.25); head.add(nos);
+    for (let k = 0; k < 6; k++) { const g = new THREE.ConeGeometry(0.035 + (k === 1 ? 0.02 : 0), 0.14 + (k === 1 ? 0.1 : 0), 5); g.translate(0, -0.07, 0); const t = new THREE.Mesh(g, M.tooth); t.position.set(s * (0.28 - k * 0.025), -0.15, 1.35 + k * 0.17); head.add(t); }
+    // corna: quattro coni che si piegano all'indietro e verso il basso, più un corno minore
+    for (const [hx, hy, hz, sc, rz] of [[0.32, 0.55, 0.2, 1, 0.35], [0.4, 0.35, -0.05, 0.55, 0.9]]) {
+      let hp = joint(head, '', s * hx, hy, hz); hp.rotation.set(-1.85, s * rz, 0);
+      for (let k = 0; k < 4; k++) { const Lh = (0.6 - k * 0.1) * sc, g = new THREE.ConeGeometry((0.16 - k * 0.035) * sc, Lh, 7, 1, k < 3); g.translate(0, Lh / 2, 0);
+        const c = new THREE.Mesh(g, M.horn); c.castShadow = true; hp.add(c); const n = joint(hp, '', 0, Lh * 0.95, 0); n.rotation.x = 0.38; hp = n; }
+    }
+    for (let k = 0; k < 4; k++) spike(head, s * (0.42 + k * 0.03), 0.05 - k * 0.1, 0.05 - k * 0.12, 0.38 - k * 0.05, 0.06, -1.75).rotation.z = s * 0.5;   // frangia di spine sulle guance
   }
-  const jaw = joint(head, 'mascella', 0, -0.22, 0.3);
-  piece(jaw, 0.66, 0.24, 1.75, [M.sc, M.sc, M.tongue, M.be, M.sc, M.sc], 0, -0.1, 0.95);
-  piece(jaw, 0.32, 0.06, 1.1, M.tongue, 0, 0.04, 0.8);
-  for (const s of [-1, 1]) for (let k = 0; k < 5; k++) { const t = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.14, 4), M.tooth); t.position.set(s * 0.27, 0.07, 0.9 + k * 0.2); jaw.add(t); }
-  // coda: dieci anelli che si assottigliano, con la punta a losanga
+  const jaw = joint(head, 'mascella', 0, -0.2, 0.3);
+  LO(jaw, [{ t: -0.2, w: 0.32, h: 0.16, oy: 0 }, { t: 0.4, w: 0.34, h: 0.15, oy: -0.06 }, { t: 1.1, w: 0.27, h: 0.12, oy: -0.05 }, { t: 1.7, w: 0.2, h: 0.09, oy: -0.02 }, { t: 1.95, w: 0.1, h: 0.05, oy: 0 }],
+    { radial: 12, round: 0.8, belly: [0.3, 0.7], vRep: 3 }, [M.sc, M.be]);
+  { const tg = new THREE.Mesh(loft(taper(0.1, 1.4, 0.13, 0.04, 0.06, 0.02, 0.1, 4), { radial: 8, belly: [2, 2] }), M.tongue); tg.position.y = 0.11; jaw.add(tg); }
+  for (const s of [-1, 1]) for (let k = 0; k < 6; k++) { const g = new THREE.ConeGeometry(0.03, 0.12, 5); g.translate(0, 0.06, 0); const t = new THREE.Mesh(g, M.tooth); t.position.set(s * (0.25 - k * 0.022), 0.1, 0.55 + k * 0.2); jaw.add(t); }
+  // coda: dieci anelli che si assottigliano, ognuno con la spina, punta a foglia
   p = joint(corpo, 'coda0', 0, 0.2, -3.4);
-  for (let i = 0; i < 10; i++) { const w = 1.25 - i * 0.1; piece(p, w, w * 0.9, 1.05, body6, 0, 0, -0.48); spike(p, 0, w * 0.47, -0.5, 0.45 - i * 0.03, 0.14, 0.5);
+  for (let i = 0; i < 10; i++) { const w0 = (1.3 - i * 0.1) / 2, w1 = (1.2 - i * 0.1) / 2;
+    LO(p, taper(0.18, -1.12, w0 * 1.05, w0, w1 * 1.05, w1, 0.05, 5), { radial: 12, vRep: 3 });
+    spike(p, 0, w0 * 0.9, -0.5, 0.4 - i * 0.025, 0.11, -2.4 + 0.15 * 0);
     if (i < 9) p = joint(p, 'coda' + (i + 1), 0, 0, -0.98); }
-  { const tip = piece(p, 1.0, 0.08, 1.0, M.dark, 0, 0, -1.2); tip.rotation.y = PI / 4; }
-  // zampe: tre segmenti e tre artigli
+  { const s = new THREE.Shape(); s.moveTo(0, 0); s.quadraticCurveTo(0.55, -0.3, 0.1, -1.3); s.lineTo(0, -1.45); s.lineTo(-0.1, -1.3); s.quadraticCurveTo(-0.55, -0.3, 0, 0);
+    const g = new THREE.ExtrudeGeometry(s, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 1 }); g.rotateX(PI / 2); g.translate(0, 0.03, -0.9);
+    const tip = new THREE.Mesh(g, M.dark); tip.castShadow = true; p.add(tip); }
+  // zampe: coscia muscolosa, stinco, piede con tre dita e artigli e uno sperone dietro
   for (const [n, x, y, z, front] of [['AS', 1.25, -0.35, 2.4, 1], ['AD', -1.25, -0.35, 2.4, 1], ['PS', 1.3, -0.4, -2.4, 0], ['PD', -1.3, -0.4, -2.4, 0]]) {
     const up = joint(corpo, 'zampa' + n, x, y, z);
-    piece(up, front ? 0.75 : 0.95, front ? 1.8 : 1.95, front ? 0.85 : 1.1, M.sc, 0, -0.85, 0);
+    LO(up, front ? taper(-0.2, 1.85, 0.38, 0.42, 0.24, 0.27, 0.22, 6) : taper(-0.25, 1.9, 0.5, 0.62, 0.27, 0.32, 0.25, 6), { axis: 'y', radial: 12, belly: [2, 2], vRep: 4 });
     const lo = joint(up, 'gamba' + n, 0, front ? -1.7 : -1.75, 0);
-    piece(lo, 0.6, 1.5, 0.66, M.sc, 0, -0.7, 0);
+    LO(lo, taper(-0.12, 1.55, front ? 0.26 : 0.3, front ? 0.28 : 0.32, 0.19, 0.2, 0.12, 5), { axis: 'y', radial: 10, belly: [2, 2], vRep: 3 });
     const ft = joint(lo, 'piede' + n, 0, front ? -1.45 : -1.4, 0);
-    piece(ft, 0.85, 0.3, 1.05, M.sc, 0, -0.15, 0.3);
-    for (const cx of [-0.27, 0, 0.27]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 4), M.claw); c.position.set(cx, -0.2, 0.95); c.rotation.x = PI / 2 + 0.3; c.castShadow = true; ft.add(c); }
+    LO(ft, [{ t: -0.3, w: 0.26, h: 0.16, oy: -0.12 }, { t: 0.1, w: 0.36, h: 0.17, oy: -0.15 }, { t: 0.45, w: 0.36, h: 0.13, oy: -0.18 }], { radial: 10, belly: [0.3, 0.7] });
+    for (const [dx, a, ln] of [[-0.24, -0.35, 0.55], [0, 0, 0.65], [0.24, 0.35, 0.55], [0, PI, 0.3]]) {
+      const toe = joint(ft, '', dx * 0.8, -0.2, 0.42 * (a === PI ? -0.7 : 1)); toe.rotation.y = a;
+      LO(toe, taper(-0.05, ln, 0.09, 0.08, 0.06, 0.05, 0.15, 4), { radial: 8 });
+      const g = new THREE.ConeGeometry(0.06, 0.32, 5); g.translate(0, 0.16, 0); const c = new THREE.Mesh(g, M.claw); c.position.set(0, 0, ln); c.rotation.x = PI / 2 + 0.55; c.castShadow = true; toe.add(c);
+    }
   }
   // ali: omero, avambraccio, mano e quattro dita; la membrana è una mesh che segue le ossa
   const wings = [];
   for (const s of [1, -1]) { const L = s > 0 ? 'S' : 'D';
     const sh = joint(corpo, 'ala' + L, s * 1.0, 1.0, 1.3);
-    piece(sh, 2.6, 0.36, 0.42, M.sc, s * 1.3, 0, 0);
-    const fa = joint(sh, 'avambraccio' + L, s * 2.6, 0, 0); piece(fa, 3.0, 0.28, 0.32, M.sc, s * 1.5, 0, 0);
+    { const g = new THREE.CylinderGeometry(0.15, 0.24, 2.7, 8); g.rotateZ(-s * PI / 2); const m = new THREE.Mesh(g, M.sc); m.position.x = s * 1.3; m.castShadow = true; sh.add(m);
+      LO(sh, taper(-0.3, 0.9, 0.42, 0.4, 0.25, 0.2, 0.2, 4), { radial: 10 }, null, s * 0.25, -0.05, 0).rotation.y = s * PI / 2; }
+    const fa = joint(sh, 'avambraccio' + L, s * 2.6, 0, 0); { const g = new THREE.CylinderGeometry(0.1, 0.16, 3.05, 8); g.rotateZ(-s * PI / 2); const m = new THREE.Mesh(g, M.sc); m.position.x = s * 1.5; m.castShadow = true; fa.add(m);
+      const k = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 6), M.sc); fa.add(k); const w2 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), M.sc); w2.position.x = s * 3.0; fa.add(w2); }
     const hand = joint(fa, 'mano' + L, s * 3.0, 0, 0);
-    const c = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 4), M.claw); c.position.set(s * 0.15, 0.2, 0.15); c.rotation.x = -0.6; hand.add(c);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.45, 6), M.claw); c.position.set(s * 0.1, 0.22, 0.12); c.rotation.x = -0.6; hand.add(c);
     const tips = FINGERS.map(([a, len], i) => { const f = joint(hand, 'dito' + L + (i + 1), 0, 0, 0); f.rotation.y = s * a;
-      piece(f, len, 0.14 - i * 0.02, 0.14 - i * 0.02, M.dark, s * len / 2, 0, 0); return joint(f, '', s * len, 0, 0); });
+      { const g = new THREE.CylinderGeometry(0.025, 0.075 - i * 0.01, len, 6); g.rotateZ(-s * PI / 2); const m = new THREE.Mesh(g, M.dark); m.position.x = s * len / 2; m.castShadow = true; f.add(m); } return joint(f, '', s * len, 0, 0); });
     const back = joint(corpo, '', s * 0.95, 0.75, -1.9);
     wings.push({ sh, fa, hand, tips, back });
   }

@@ -69,6 +69,7 @@ function tick() { /* aggiorna E.time.value, effetti, controlli */ post.render();
 | `characters/puppet.js` | `joint`, `piece`, `charMat`, `charTex`, `makeClip`, `animator` | marionette a pezzi rigidi e clip di animazione |
 | `characters/villager.js` | `villager()`, `villagerClips()` | abitante: `fermo`, `cammina`, `corre`, `saluta` |
 | `characters/cat.js` | `cat()`, `catClips()` | gatto: `fermo`, `cammina`, `trotta`, `seduto` |
+| `characters/loft.js` | `loft(sezioni, opts)`, `taper(...)` | forme organiche: sezioni ellittiche lungo un asse, con gruppo "ventre" |
 | `characters/dragon.js` | `dragon()`, `dragonClips()` | drago: `fermo`, `cammina`, `ruggisce`, `vola`; chiamare `update()` dopo l'animazione |
 | `controls/firstPerson.js` | `firstPerson({canvas, start, groundAt, collide, stick, knob})` | camminata in prima persona |
 
