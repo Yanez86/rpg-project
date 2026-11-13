@@ -20,3 +20,8 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 ## Ambiente degli artifact claude.ai
 - Gli script si caricano solo da cdnjs / jsdelivr / unpkg; Three.js r128 da cdnjs e `BufferGeometryUtils` da `cdn.jsdelivr.net/npm/three@0.128.0`.
 - Il sandbox di sviluppo non ha rete: test con `node --check` e uno **stub di THREE** (`reference/build/stub.js`), che però non vede gli errori GPU.
+
+## Moduli ES
+- I moduli non si caricano da `file://`: serve un server HTTP. `three` arriva dall'import map (`three@0.128.0/build/three.module.js`); l'import map deve precedere ogni `<script type="module">`.
+- Nelle pagine pubblicate come artifact claude.ai la query string non arriva alla pagina: per le varianti (es. notte) usare l'hash (`#notte`).
+- Un modulo non deve creare materiali o texture al caricamento (top-level): `createTextures()` e il contesto non esistono ancora. Crearli in modo pigro al primo uso (vedi `lanternMats()`, `flowerGeometry()`, `leafMat()`).
