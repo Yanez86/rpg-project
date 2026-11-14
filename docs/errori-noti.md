@@ -88,4 +88,5 @@ Problemi incontrati costruendo la scena di riferimento. Controllali prima di scr
 - **Incavo fra fianco e gluteo con il cel shading**: un incavo anche leggero fa girare la superficie e il contorno a spessore costante vi disegna una seconda linea nelle viste di tre quarti. Tenerlo minimo.
 - **Bordo che si vede camminando**: un pezzo che aderisce a un altro pezzo rigido (il bacino alla coscia) resta scoperto quando quello ruota. Farlo rientrare presto, così il bordo si vede poco e solo nei passi.
 - **Tabelle nelle misure**: `float()` non accetta una tupla; le misure scritte nel modello vanno convertite in modo ricorsivo (tuple di tuple → liste di liste).
+- **Volumi tarati prima di cambiare le proporzioni**: allungando le gambe e accorciando il busto, glutei e seno della stessa misura sembrano più grandi sul corpo più slanciato. Dopo un cambio di proporzioni ricontrollare i volumi; per i glutei basta scalare la sporgenza (`glutei_sporgenza`), la forma resta.
 - **Variabile che copre una funzione**: in `personaggi.py` `tb()` converte le coordinate da three a Blender; chiamare `tb` un numero rompe ogni `build()` dopo (`'float' object is not callable`).
