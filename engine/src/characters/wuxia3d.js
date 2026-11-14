@@ -1,11 +1,12 @@
 // Wuxia: una donna adulta da romanzo wuxia modellata in Blender (engine/tools/blender/personaggi.py --modello wuxia →
 // engine/assets/wuxia.glb). Personaggio originale: proporzioni di un basemesh da scultura (gambe lunghe, busto corto), tratti
 // femminili accentuati un poco (figura a clessidra: vita sottile, fianchi pieni, seno e glutei più pronunciati), senza dettagli espliciti.
-// Strati: corpo base liscio, intimo (dudou e brasiliana di seta), capelli raccolti in due chignon, fermagli a fiore.
+// Strati: corpo base liscio, intimo (dudou e brasiliana di seta), abiti (veste a collo incrociato, gonna in due metà, fusciacca,
+// pantaloni, stivali), accessori (pendaglio di giada, fermagli a fiore), capelli raccolti in due chignon.
 // Stessi giunti e stesse clip dell'elfa (villagerClips), materiali dal motore (humanMats), cel shading con setToon().
 // Uso:  await loadWuxia3d();  const w = wuxia3d();  scene.add(w.root); w.anim.play('cammina'); setToon(w.root, true)
 import { hn, pick } from '../core/rng.js';
-import { animator, charTex } from './puppet.js';
+import { animator, charTex, charMat } from './puppet.js';
 import { humanMats, villagerClips } from './villager.js';
 import { vesti, pezziDi, nodoModello } from './guardaroba.js';
 
@@ -23,20 +24,24 @@ export async function loadWuxia3d(url) {
 export function setWuxia3d(buffer) { TPL = nodoModello(buffer, 'wuxia'); return TPL; }
 export const wuxia3dReady = () => !!TPL;
 /** nomi dei materiali che il modello può usare */
-export const WUXIA3D_MATERIALS = ['pelle', 'pelle_ombra', 'volto', 'capelli', 'lino', 'seta', 'petalo', 'bordo', 'metallo', 'gemma'];
+export const WUXIA3D_MATERIALS = ['pelle', 'pelle_ombra', 'volto', 'capelli', 'lino', 'seta', 'petalo', 'bordo', 'metallo', 'gemma',
+  'abito', 'gonna', 'calze', 'cuoio', 'fusciacca', 'giada'];
 /** i capi del modello, per strato */
 export const pezziWuxia3d = () => pezziDi(TPL);
 /** tutti i capi del modello */
 export const tuttiIPezziWuxia = () => Object.values(pezziWuxia3d()).flat();
 
-/** aspetto casuale: carnagione, capelli scuri, occhi, seta del dudou con il suo ricamo, fiori, rossetto */
+/** aspetto casuale: carnagione, capelli scuri, occhi, seta del dudou con il suo ricamo, fiori, rossetto e l'abito */
 export function wuxiaLook() {
   const pal = pick([[0xb02a2a, 0xe0b048], [0x2e7a62, 0xe0c890], [0x2a3e7a, 0xd0a850], [0x7a2a5a, 0xe8c080]]);   // seta, ricamo
+  // abito: veste, gonna, fusciacca, pantaloni, stivali (toni spenti; il saturo resta nei bordi e nella seta)
+  const ab = pick([[0xc9d3d6, 0x8a98a2, pal[0], 0xe2ddd2, 0x2e2824], [0x7fa496, 0xb8cbbf, 0x2e3a36, 0x3a4440, 0x26221e],
+    [0x2e3138, 0x4a4e58, pal[0], 0x24262c, 0x1e1b19], [0x8a3434, 0xd8c8b0, 0x2a2420, 0x3a2c2c, 0x2a201c]]);
   return {
     skin: pick([[244, 222, 202], [236, 208, 182], [226, 194, 166], [250, 230, 214]]), hair: pick([0x14100e, 0x1c1410, 0x2a1a12, 0x101418]),
     eye: pick([[58, 38, 28], [40, 28, 24], [78, 52, 34]]), lips: pick([[196, 40, 48], [176, 46, 60], [204, 70, 70]]),
     silk: pal[0], trim: pal[1], linen: 0xf0e8da, petal: pick([0xf6eedc, 0xf2c4cc, 0xfaf6ee]), metal: 0xd0a850, gem: pick([0xc83a3a, 0x3aa880, 0xe0c060]),
-    fine: true, top: pal[0], cloak: 0x2a2a2a, trous: 0x2a2a2a,
+    fine: true, top: ab[0], skirt: ab[1], cloak: ab[2], trous: ab[3], boots: ab[4],
   };
 }
 
@@ -78,7 +83,7 @@ export function wuxia3d(opts) {
   if (!TPL) throw new Error('wuxia3d(): prima carica il modello con await loadWuxia3d()');
   const look = wuxiaLook(), M = humanMats(look, faceTexWuxia(look));
   const mats = { pelle: M.skin, pelle_ombra: M.skinShade, volto: M.face, capelli: M.hair, lino: M.linen, seta: M.silk, petalo: M.petal,
-    bordo: M.trim, metallo: M.metal, gemma: M.gem };
+    bordo: M.trim, metallo: M.metal, gemma: M.gem, abito: M.top, gonna: M.skirt, calze: M.trous, cuoio: M.leather, fusciacca: M.cloak, giada: charMat(0x6aa88a) };   // giada verde: il pendaglio
   const root = TPL.clone(true);
   root.traverse(o => { if (o.isMesh) { o.material = mats[o.userData.mat] || M.skin; o.castShadow = true; o.receiveShadow = true; } });
   const misure = TPL.userData.misure;

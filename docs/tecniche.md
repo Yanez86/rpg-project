@@ -37,6 +37,8 @@ I nomi usati durante il lavoro, con una spiegazione breve. Utile per parlarne e 
 | **Layered clothing** (vestiti a strati) | i capi sono pezzi separati, a strati (intimo, abiti, accessori), che si mettono e si tolgono | guardaroba dell'elfa |
 | **Body masking** (regioni nascoste) | le parti del corpo coperte da un capo si nascondono, così non bucano la stoffa | `nasconde` / `scegliVisibili` |
 | **Confronto a fette** (sezioni orizzontali) | due corpi portati alla stessa altezza e tagliati a fette: per ogni quota larghezza e profondità, da cui cavallo, vita, seno, spalle, ginocchio; le sagome sovrapposte mostrano dove differiscono | wuxia confrontata con un basemesh da scultura |
+| **Strisce appoggiate** (decal geometrici) | una striscia (bavero, nastro, profilo) si costruisce con punti trovati con i raggi sulla superficie, in più file e appena sollevata, così segue la curva e i bordi restano netti | baveri della veste di wuxia, nastri della fusciacca |
+| **Colore per faccia** (`matf`) | il loft sceglie il materiale di ogni faccia secondo la posizione (giro e altezza): una zona di un altro colore senza un oggetto in più | la V chiara fra i baveri |
 | **Raccordo fra pezzi rigidi** (aderire e rientrare) | dove un pezzo deve continuare in un altro, il primo si appoggia alla superficie del secondo appena fuori e scendendo ci rientra piano: il contorno passa dall'uno all'altro senza punta | fianco e glutei di wuxia che scendono nella coscia (`gl_def`) |
 | **Rigid skinning** (marionetta) | ogni pezzo segue un solo giunto, senza deformarsi | tutti i personaggi; la gonna dell'elfa di Blender divisa sui giunti delle cosce |
 | **LatheGeometry** (tornitura) | solido ottenuto ruotando un profilo | lanterne |

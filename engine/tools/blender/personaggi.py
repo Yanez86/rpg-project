@@ -88,7 +88,7 @@ COLL = bpy.context.scene.collection
 PREVIEW = {
     'abito': 0x3e5a46, 'gonna': 0x3e5a46, 'mantello': 0x2e4436, 'calze': 0x3a3430, 'cuoio': 0x5a4632, 'cintura': 0x2e2218,
     'metallo': 0xc8c8c0, 'bordo': 0xc8a050, 'pelle': 0xecd6c4, 'pelle_ombra': 0xc2afa0, 'capelli': 0xe8dcb0, 'volto': 0xecd6c4,
-    'gemma': 0x6ac8b0, 'lino': 0xd6cab0, 'seta': 0xa82a2a, 'petalo': 0xf2ead8,
+    'gemma': 0x6ac8b0, 'lino': 0xd6cab0, 'seta': 0xa82a2a, 'petalo': 0xf2ead8, 'fusciacca': 0x8a2a2a, 'giada': 0x6aa88a,
 }
 MATS = {}
 def mat(name):
@@ -308,6 +308,7 @@ def build(name, joint_name, g, mods=(), sharp=None, extras=None, tags=None):
     me.validate(clean_customdata=False); me.update()
     ob = bpy.data.objects.new(name, me); COLL.objects.link(ob); ob.parent = J[joint_name]
     for k, v in {**(CUR if tags is None else tags), **(extras or {})}.items(): ob[k] = v   # proprietà → "extras" del glTF → userData nel motore
+    if extras and 'regione' in extras and tags is None: REG[(joint_name, CUR.get('pezzo'))] = extras['regione']   # i dettagli del capo la ereditano
     for kind, opts in mods:
         md = ob.modifiers.new(kind.lower(), kind)
         for k, v in opts.items(): setattr(md, k, v)
@@ -322,6 +323,7 @@ def build(name, joint_name, g, mods=(), sharp=None, extras=None, tags=None):
 #   richiede: il capo su cui si appoggia (il borsello pende dalla cintura, la spilla sta sul colletto dell'abito)
 # Il corpo è liscio come un manichino (nessun dettaglio anatomico): l'intimo è il primo strato.
 CUR = {}
+REG = {}                                              # regione di ogni capo per giunto: (giunto, pezzo) → regione
 def pezzo(strato, nome, nasconde=(), richiede=None):
     CUR.clear(); CUR.update(strato=strato, pezzo=nome)
     if nasconde: CUR['nasconde'] = ','.join(nasconde)
@@ -630,6 +632,54 @@ body_secs = shrink(torso_secs, 0.004)
 body_torso = loft(body_secs, N=40, step=0.024, mat='pelle'); BTB = body_torso.bvh()
 build('busto_corpo', 'busto', body_torso, extras={'regione': 'busto'})
 if not ELF: dudou(BTB)
+
+def nastro(A, B, mat_):
+    """striscia fra due file di punti già sulla superficie (bavero, nastri): un quadrilatero per tratto, girato verso l'esterno"""
+    g = Part(); n = len(A); g.v = [tuple(p) for p in A] + [tuple(p) for p in B]
+    for i in range(n - 1):
+        f = [i, i + 1, n + i + 1, n + i]; uv = [(0, i / n), (0, (i + 1) / n), (1, (i + 1) / n), (1, i / n)]
+        if (A[i + 1] - A[i]).cross(B[i] - A[i]).dot(Vector((A[i].x, 0.0, A[i].z))) < 0: f, uv = f[::-1], uv[::-1]
+        g.face(f, uv, mat_)
+    return g
+def sul(bv, a, y, off):
+    """punto della superficie nella direzione a (giri: 0 davanti, 0,25 a sinistra) all'altezza y, spostato di off verso l'esterno"""
+    d = Vector((sin(a * TAU), 0, cos(a * TAU))); return probe(bv, Vector((0, y, 0)) + d * 0.6, -d, off)
+
+if not ELF:
+    # ================================================================= VESTE di wuxia: giacca a collo incrociato (jiaoling)
+    # Il bavero sinistro passa sopra il destro (la "y" vista di fronte): dal lato sinistro del collo scende al fianco destro.
+    # Nella V fra i due baveri si vede la veste di sotto (lino chiaro); i baveri sono strisce bordate appoggiate sulla stoffa.
+    # Sopra il seno la stoffa è tesa (passa sopra il solco), sotto ricade dritta fino alla fusciacca.
+    pezzo('abiti', 'veste', nasconde=('busto', 'braccio', 'bacino'))
+    VT, VB, VW, BW = -0.488, -0.24, (0.07, -0.15), 0.06    # collo, fine della diagonale, bordo del bavero in alto e in fondo (giri), larghezza
+    def bavero(t):
+        f = max(0.0, min(1.0, (t - VT) / (VB - VT))); return VW[0] + (VW[1] - VW[0]) * f
+    def veste_bumps(s_):
+        bs = s_.get('bumps', []); out = [b for b in bs if 0.25 < b[0] % 1 < 0.75 and not (b[1] < 0 and b[2] < 0.03)]   # dietro (non il solco)
+        k = next((b[1] / (S['seno'] * (1 - S.get('seno_largo', 0.0))) for b in bs if abs(b[0] - 0.085) < 1e-6 and b[2] == 0.062), 0.0)
+        if k: out += [(sd * 0.085, S['seno'] * k * 0.62, 0.09) for sd in (1, -1)] + [(0.0, S['seno'] * k * 0.42, 0.07)]
+        if s_['t'] > -0.26: out.append((0.0, 0.1 * sm(-0.04, -0.26, s_['t']), 0.12))   # sotto il seno la stoffa ricade
+        return out
+    robe_secs = [dict(s_, w=s_['w'] + 0.008, h=s_['h'] + 0.008, bumps=veste_bumps(s_)) for s_ in torso_secs]
+    def veste_mat(a, t):
+        d = a - round(a); return 'lino' if abs(d) < bavero(t) else 'abito'
+    vt = loft(robe_secs, N=64, step=0.016, mat='abito', matf=veste_mat)
+    VTB = vt.bvh(); ve = Part().add(vt)
+    tc_ = VT + (VB - VT) * VW[0] / (VW[0] - VW[1])          # dove i due baveri si incrociano
+    ts_ = [VT + (-0.06 - VT) * k / 44 for k in range(45)]
+    def fascia_su(bv, ts, a_fn, w, off=0.0016, n=4, mat_='bordo'):
+        """striscia larga w (giri) appoggiata sulla superficie lungo a_fn(t): n file, così segue la curva invece di passarci sotto"""
+        rows = [[sul(bv, a_fn(t) + w * k / n, -t, off) for t in ts] for k in range(n + 1)]
+        g = Part()
+        for k in range(n): g.add(nastro(rows[k], rows[k + 1], mat_))
+        return g
+    ve.add(fascia_su(VTB, ts_, bavero, BW))
+    ve.add(fascia_su(VTB, [VT + (tc_ - VT) * k / 16 for k in range(17)], lambda t: -bavero(t), -BW))
+    build('busto_veste', 'busto', ve)
+    oyT = torso_secs[-1].get('oy', 0.0)                   # colletto dritto intorno al collo, aperto davanti fra i due baveri
+    col = loft([dict(t=-0.49, w=0.058, h=0.054, oy=oyT), dict(t=-0.525, w=0.053, h=0.05, oy=oyT), dict(t=-0.545, w=0.051, h=0.048, oy=oyT)],
+               N=40, step=0.02, arc=(VW[0], 1 - VW[0]), mat='bordo')
+    build('busto_veste_colletto', 'busto', col, mods=[('SOLIDIFY', dict(thickness=0.003, offset=1.0))])
 if ELF:
     pezzo('intimo', 'fascia')                           # fascia di lino sul petto
     build('busto_fascia', 'busto', loft(shrink([s for s in torso_secs if -0.4 <= s['t'] <= -0.23], 0.0015), N=40, step=0.02, caps=(False, False), mat='lino'), extras={'regione': 'busto'})
@@ -798,6 +848,72 @@ if BRAS:                                             # profili dorati sul bordo 
     D('anca').add(tube([culotte.v[i] for i in range(NP)], 0.0016, 4, True, 'bordo'))
     D('anca').add(tube(EDGE_, 0.0016, 4, True, 'bordo'))
 
+if not ELF:
+    # ---- veste: sotto la vita l'orlo si allarga sui fianchi (più in profondità che di lato: le cosce vanno avanti e indietro)
+    pezzo('abiti', 'veste', nasconde=('busto', 'braccio', 'bacino'))
+    def stoffa(s_, d):
+        """sezione del bacino vestita: d più larga, i glutei restano ma il solco e gli incavi no (la stoffa ci passa sopra)"""
+        return dict(t=s_['t'], w=s_['w'] + d, h=s_['h'] + d, oy=s_.get('oy', 0.0), bumps=[(a_, m_, s2 * 1.25) for a_, m_, s2 in s_.get('bumps', []) if m_ > 0])
+    pep_v = [stoffa(pelvis_secs[0], 0.012)] + [stoffa(s_, 0.014) for s_ in pelvis_secs if -0.04 < s_['t'] <= 0.04] + \
+            [dict(t=0.075, w=0.192, h=0.155, oy=-0.012), dict(t=0.115, w=0.218, h=0.18, oy=-0.008), dict(t=0.165, w=0.226, h=0.186, oy=-0.006)]   # svasata ad A: le cosce che vanno avanti restano sotto
+    pv = loft(pep_v, N=64, R=0.78, step=0.016, caps=(True, False), mat='abito')            # R più basso: più piena in diagonale, dove la coscia avanza
+    PVB = pv.bvh(); pvp = Part().add(pv)
+    ts_ = [-0.06 + (0.163 + 0.06) * k / 24 for k in range(25)]       # il bavero continua sul fianco destro fino all'orlo
+    build('anca_veste', 'anca', pvp, mods=[('SOLIDIFY', dict(thickness=0.003, offset=-1.0))])
+    build('anca_veste_bavero', 'anca', fascia_su(PVB, ts_, lambda t: VW[1], BW))   # a parte: lo spessore dell'orlo non deve toccarla
+    D('anca').add(tube([sec_point(dict(pep_v[-1], w=pep_v[-1]['w'] + 0.001, h=pep_v[-1]['h'] + 0.001), i / 64, 0.78, 'y') for i in range(64)], 0.0028, 4, True, 'bordo'))
+
+    # ---- gonna in due metà appese alle cosce (come quella dell'elfa): camminando si aprono davanti e dietro, come gli spacchi
+    pezzo('abiti', 'gonna')
+    def gonna_def(p, a, t):
+        x, y, z = p; k = 1 + 0.035 * sm(0.15, 0.45, t) * sin(TAU * 8 * a + 0.6 * sin(TAU * 3 * a)); return (x * k, y, z * k)
+    gn = [dict(t=0.15, w=0.198, h=0.135, oy=-0.012), dict(t=0.21, w=0.212, h=0.15, oy=-0.01), dict(t=0.32, w=0.226, h=0.158, oy=-0.004), dict(t=0.47, w=0.244, h=0.166, oy=0.0)]   # parte sotto l'orlo della veste
+    for s in (1, -1):
+        L = 'S' if s > 0 else 'D'; arc = (0.0, 0.5) if s > 0 else (0.5, 1.0); toJ = tr(-s * XC_, 0.06, 0)
+        build('coscia' + L + '_gonna', 'coscia' + L, loft(gn, N=32, step=0.03, arc=arc, deform=gonna_def, mat='gonna').xform(toJ),
+              mods=[('SOLIDIFY', dict(thickness=0.003, offset=-1.0))])
+        orlo = [dict(gn[-1], t=0.47 - 0.03, w=0.241 + 0.004, h=0.164 + 0.004), dict(gn[-1], t=0.472, w=0.244 + 0.004, h=0.166 + 0.004)]
+        D('coscia' + L).add(loft(orlo, N=32, step=0.03, arc=arc, deform=gonna_def, mat='bordo').xform(toJ))
+
+    # ---- fusciacca: fascia di seta in vita sopra la veste, con il fiocco sul fianco sinistro e due nastri che scendono
+    pezzo('abiti', 'fusciacca')
+    vta = Part(); vta.v = [(p_[0], p_[1] * KT + 0.05, p_[2]) for p_ in vt.v]; vta.f = vt.f   # la veste del busto nel sistema dell'anca
+    VAB = Part(); VAB.v = vta.v + pv.v; VAB.f = vta.f + [[i + len(vta.v) for i in f_] for f_ in pv.f]; VAB = VAB.bvh()
+    fy_ = [0.105, 0.092, 0.075, 0.058, 0.045]                  # altezze (sopra il giunto dell'anca): la fascia è alta 6 cm
+    rows_ = [[sul(VAB, i / 64, y_, 0.006 + 0.003 * sin(PI * k / 4)) for i in range(64)] for k, y_ in enumerate(fy_)]
+    fz = Part()
+    for k in range(len(rows_) - 1): fz.add(nastro(rows_[k] + [rows_[k][0]], rows_[k + 1] + [rows_[k + 1][0]], 'fusciacca'))
+    build('anca_fusciacca', 'anca', fz)
+    for r_ in (rows_[0], rows_[-1]): D('anca').add(tube([tuple(p_) for p_ in r_], 0.0014, 4, True, 'fusciacca'))
+    an = 0.09; kn = sul(VAB, an, 0.075, 0.016); dn = Vector((sin(an * TAU), 0, cos(an * TAU)))
+    side = Vector((cos(an * TAU), 0, -sin(an * TAU)))       # tangente alla vita verso destra
+    fiocco = Part().add(ellipsoid(tuple(kn), (0.013, 0.012, 0.009), 10, 'fusciacca'))
+    for sd in (1, -1):                                    # due anse del fiocco
+        c_ = kn + side * sd * 0.024 + Vector((0, 0.004, 0)) - dn * 0.003
+        e_ = ellipsoid((0, 0, 0), (0.022, 0.012, 0.006), 10, 'fusciacca'); e_.xform(tr(*c_) @ rot(0, math.atan2(dn.x, dn.z), sd * 0.35)); fiocco.add(e_)
+    nastri = Part()
+    for sd, a0, ln in ((1, an - 0.012, 0.2), (-1, an + 0.016, 0.17)):   # due nastri, uno più corto, con la punta tagliata a V
+        A_, B_ = [], []
+        for k in range(14):
+            f_ = k / 13; y_ = 0.07 - ln * f_; d_ = 0.012 + 0.02 * f_
+            A_.append(sul(PVB, a0 - 0.012, y_ - 0.06 * 0 , d_) if y_ < 0.06 else sul(VAB, a0 - 0.012, y_, d_))
+            B_.append(sul(PVB, a0 + 0.012, y_ - (0.012 if k == 13 else 0.0), d_) if y_ < 0.06 else sul(VAB, a0 + 0.012, y_, d_))
+        nastri.add(nastro(A_, B_, 'fusciacca'))
+    fiocco.add(nastri)
+    build('anca_fusciacca_fiocco', 'anca', fiocco, mods=[('SOLIDIFY', dict(thickness=0.002, offset=1.0))])
+
+    # ---- pendaglio di giada appeso alla fusciacca sul davanti a destra: cordoncino, disco forato (bi), nodo e nappa di seta
+    pezzo('accessori', 'pendaglio', richiede='fusciacca')
+    ap = -0.07; dp = Vector((sin(ap * TAU), 0, cos(ap * TAU)))
+    top_ = sul(VAB, ap, 0.045, 0.008); cen = sul(PVB, ap, -0.02, 0.02)
+    D('anca').add(tube([tuple(top_), tuple(cen + Vector((0, 0.022, 0)))], 0.0013, 4, False, 'seta'))
+    Mb = tr(*cen) @ rot(0, math.atan2(dp.x, dp.z), 0)
+    D('anca').add(tube([tuple(Mb @ Vector((0.0125 * cos(i / 20 * TAU), 0.0125 * sin(i / 20 * TAU), 0))) for i in range(20)], 0.0055, 6, True, 'giada'))
+    D('anca').add(ellipsoid(tuple(Mb @ Vector((0, -0.024, 0))), (0.004, 0.004, 0.004), 8, 'seta'))
+    for k in range(7):
+        xk = (k - 3) * 0.0016
+        D('anca').add(tube([tuple(Mb @ Vector((xk * 0.6, -0.026, 0))), tuple(Mb @ Vector((xk * 1.6, -0.06, 0.001 * (k % 2)))), tuple(Mb @ Vector((xk * 2.0, -0.085, 0)))], 0.0011, 4, False, 'seta'))
+
 if ELF:
     # La gonna sotto i fianchi è divisa in due metà appese ai giunti cosciaS/D: camminando seguono la gamba invece di farsi
     # bucare dal ginocchio (con un pezzo rigido sull'anca succedeva). L'attacco è coperto dalla baschina, che resta sull'anca.
@@ -915,6 +1031,11 @@ for s in (1, -1):
                 q = M @ Vector((r0 * 1.04 * -cos(ph) * sin(0.33 * PI), r0 * 1.04 * cos(0.33 * PI), r0 * 1.04 * sin(ph) * sin(0.33 * PI))); D('spalla' + L).add(ellipsoid(tuple(q), (0.0028, 0.0028, 0.0028), 8, 'bordo'))
         build('spalla' + L + '_spallaccio', 'spalla' + L, pl, mods=[('SOLIDIFY', dict(thickness=0.0035, offset=-1.0))])
 
+    if not ELF:                                         # manica della veste sul braccio: un poco larga, più ampia verso il gomito
+        pezzo('abiti', 'veste', nasconde=('busto', 'braccio', 'bacino'))
+        build('spalla' + L + '_veste', 'spalla' + L, loft([dict(s_, w=s_['w'] + 0.0055 + 0.009 * sm(0.02, S['upper'], s_['t']), h=s_['h'] + 0.0055 + 0.009 * sm(0.02, S['upper'], s_['t']))
+                                                            for s_ in arm_secs], N=24, step=0.025, mat='abito'))
+
     # avambraccio nudo e mano semplice (scelta dell'autore) ma fine: palmo stretto, dita unite appena piegate verso il palmo
     # con i solchi accennati, pollice piccolo appoggiato lungo l'indice
     corpo()
@@ -931,6 +1052,23 @@ for s in (1, -1):
     th = loft(taper(0, 0.04, 0.0072, 0.0082, 0.005, 0.0056, 0.08, 5), N=12, step=0.007, mat='pelle')
     th.xform(tr(-s * 0.006, -0.283, 0.026) @ rot(-0.3, 0, -s * 0.14)); hand.add(th)
     build('gomito' + L + '_mano', 'gomito' + L, hand, extras={'regione': 'mano'})
+
+    if not ELF:
+        # manica larga della veste: dal gomito si apre verso il polso, più lunga dietro, con morbide pieghe e il polsino bordato
+        pezzo('abiti', 'veste', nasconde=('busto', 'braccio', 'bacino'))
+        def manica_pt(u, v):
+            a = u * TAU; back = 0.5 - 0.5 * cos(a)
+            t = -0.035 + v * (0.25 + 0.045 * back ** 1.5); r = 0.05 + 0.024 * v ** 1.3
+            r *= 1 + 0.07 * v * sin(6 * a + 0.4 * sin(2 * a))
+            return (r * sin(a), -t, r * cos(a) - 0.008 * v * back)
+        mv = Part(); NU2, NV2 = 36, 10
+        for j in range(NV2 + 1):
+            for i in range(NU2): mv.v.append(manica_pt(i / NU2, j / NV2))
+        for j in range(NV2):
+            for i in range(NU2):
+                a, b, c, d = j * NU2 + i, j * NU2 + (i + 1) % NU2, (j + 1) * NU2 + i, (j + 1) * NU2 + (i + 1) % NU2
+                mv.face([a, c, d, b], [(i / NU2 * 3, j / NV2), (i / NU2 * 3, (j + 1) / NV2), ((i + 1) / NU2 * 3, (j + 1) / NV2), ((i + 1) / NU2 * 3, j / NV2)], 'bordo' if j >= NV2 - 1 else 'abito')
+        build('gomito' + L + '_veste', 'gomito' + L, mv, mods=[('SOLIDIFY', dict(thickness=0.003, offset=1.0))])
 
     if ELF:
         pezzo('abiti', 'abito', **ABITO)                 # manica dell'abito e manica a campana con le pieghe e l'orlo a punte che scende dietro
@@ -984,6 +1122,27 @@ for s in (1, -1):
     foot = loft(fsec, N=28, axis='z', R=0.75, step=0.008, deform=toe_def, mat='pelle'); foot.xform(tr(0, fy, 0.03))
     build('ginocchio' + L + '_piede', 'ginocchio' + L, foot, extras={'regione': 'piede'})
 
+    if not ELF:
+        # pantaloni morbidi infilati negli stivali
+        pezzo('abiti', 'pantaloni', nasconde=('coscia', 'gamba'))
+        build('coscia' + L + '_pantaloni', 'coscia' + L, loft([dict(s_, w=s_['w'] + 0.008, h=s_['h'] + 0.008) for s_ in thigh_secs], N=24, step=0.03, mat='calze'))
+        build('ginocchio' + L + '_pantaloni', 'ginocchio' + L, loft([dict(s_, w=s_['w'] + 0.004 + 0.006 * sm(0.4, 0.05, s_['t']), h=s_['h'] + 0.004 + 0.006 * sm(0.4, 0.05, s_['t']))
+                                                                    for s_ in shin_secs], N=24, step=0.025, mat='calze'))
+        # stivali morbidi a metà polpaccio: gambale con il risvolto bordato, piede a punta con la suola
+        pezzo('abiti', 'stivali', nasconde=('piede',))
+        sh = Part()
+        sh.add(loft([dict(t=0.235, w=0.062, h=0.07, oy=-0.007), dict(t=0.26, w=0.06, h=0.067, oy=-0.006), dict(t=S['shin'] * 0.6, w=0.056, h=0.062, oy=-0.004),
+                     dict(t=S['shin'] * 0.89, w=0.042, h=0.047, oy=-0.004), dict(t=S['shin'] + 0.02, w=0.043, h=0.049, oy=-0.002)], N=28, step=0.025, caps=(False, True), mat='cuoio'))
+        sh.add(loft([dict(t=0.22, w=0.066, h=0.074, oy=-0.007), dict(t=0.255, w=0.064, h=0.072, oy=-0.007)], N=28, step=0.02, caps=(False, False), mat='cuoio'))
+        D('ginocchio' + L).add(tube([sec_point(dict(t=0.22, w=0.0668, h=0.0748, oy=-0.007), i / 28, 0.9, 'y') for i in range(28)], 0.0022, 4, True, 'bordo'))
+        bs = [dict(t=-0.078, w=0.03, h=0.028), dict(t=-0.06, w=0.044, h=0.044), dict(t=-0.02, w=0.05, h=0.05), dict(t=0.04, w=0.05, h=0.043), dict(t=0.1, w=0.046, h=0.032),
+              dict(t=0.15, w=0.036, h=0.024), dict(t=0.19, w=0.02, h=0.016), dict(t=0.212, w=0.004, h=0.006)]
+        for d in bs: d['oy'] = g0 + 0.011 + d['h'] * 0.98
+        sh.add(loft(bs, N=20, axis='z', step=0.022, mat='cuoio').xform(tr(0, fy, 0.03)))
+        so = [dict(t=d['t'] - 0.004 if i == 0 else d['t'], w=d['w'] * 1.06 + 0.002, h=0.0055, oy=g0 + 0.0055 + 0.002) for i, d in enumerate(bs[:-1])] + [dict(t=0.215, w=0.003, h=0.004, oy=g0 + 0.008)]
+        sh.add(loft(so, N=16, axis='z', R=0.3, step=0.03, mat='cuoio').xform(tr(0, fy, 0.03)))
+        build('ginocchio' + L + '_stivale', 'ginocchio' + L, sh, mods=[('SOLIDIFY', dict(thickness=0.002, offset=-1.0))])
+
     if ELF:
         pezzo('intimo', 'calze', nasconde=('coscia', 'gamba'))
         build('coscia' + L + '_calze', 'coscia' + L, loft(thigh_secs, N=24, step=0.03, mat='calze'), extras={'regione': 'coscia'})
@@ -1018,7 +1177,8 @@ for s in (1, -1):
         sh.add(loft([dict(t=-0.082, w=0.032, h=0.009, oy=g0 + 0.009), dict(t=-0.06, w=0.042, h=0.009, oy=g0 + 0.009), dict(t=-0.02, w=0.044, h=0.009, oy=g0 + 0.009)], N=24, axis='z', R=0.3, step=0.01, mat='cintura').xform(tr(0, fy, 0.03)))
         build('ginocchio' + L + '_stivale', 'ginocchio' + L, sh)
 
-for (j, pz), (g, tags) in DET.items(): build(j + '_' + pz + '_dettagli', j, g, tags=tags, extras={'noOutline': 1})
+for (j, pz), (g, tags) in DET.items():               # i dettagli di un capo con una regione (profili del dudou) si nascondono con lui
+    build(j + '_' + pz + '_dettagli', j, g, tags=tags, extras={'noOutline': 1, **({'regione': REG[(j, pz)]} if (j, pz) in REG else {})})
 
 # ---------------------------------------------------------------- esporta
 nfaces = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
