@@ -59,7 +59,7 @@ MISURE = {
     'wuxia': dict(hip=0.965, thigh=0.4, shin=0.405, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.42, shoulder=0.148, shoulderDrop=0.045,
                   upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.3, glutei_k=(0.6, 1.15, 1.2, 0.85, 0.35), glutei_a=0.095, glutei_s=0.066, glutei_solco=0.07, anca_mezzo=1.0, lombi_k=(0.5, 0.0),
                   anca_w=(0.13, 0.158, 0.176, 0.188, 0.11), cosce_k=(0.6, 0.75, 1.06, 1.0),
-                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005),
+                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
 }
 S = MISURE[MOD]
 # viso: l'elfa ha l'ovale lungo che si affina in un mento piccolo; wuxia un viso più tondo e morbido, guance piene, naso piccolo
@@ -686,24 +686,57 @@ pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=
                       bumps=glutei((GK[0] + GK[1]) / 2))] if S.get('anca_mezzo') else []),   # sezione in mezzo: il fianco si arrotonda senza spigolo
                dict(t=0.04, w=AW[2] if AW else hipW - 0.02, h=0.13 * W - 0.014, oy=-0.006 + IN[1] * LO, bumps=glutei(GK[1])), dict(t=0.085, w=AW[3] if AW else hipW - 0.026, h=0.11 * W, oy=-0.01 + IN[2] * LO, bumps=glutei(GK[2])),
                dict(t=0.12, w=AW[4] if AW else 0.1, h=0.068, oy=-0.008 + IN[3] * LO, bumps=glutei(GK[3])), dict(t=0.145, w=0.045, h=0.035, oy=-0.004 + IN[4] * LO, bumps=glutei(GK[4]))]   # con la curva il bacino si inclina: i glutei vanno indietro   # le cosce disegnano la linea dei fianchi
+if S.get('glutei_scolpiti'):
+    # Glutei scolpiti su una foto di riferimento (vista di schiena e di tre quarti): attacco alto con il gradino sotto le reni,
+    # due volumi quasi sferici con il punto più sporgente nella metà alta, solco netto, leggero incavo sul lato fra fianco e
+    # gluteo, fondo che si arrotonda e sporge sopra la coscia (il bacino scende un poco più giù del cavallo, dietro le cosce)
+    # e piega che sale dall'interno verso l'esterno (i due volumi si avvicinano al centro andando in basso).
+    # Per ogni sezione: t, larghezza, profondità, centro avanti/indietro, distanza fra i due volumi (giri), quanto sporge il
+    # gluteo dietro il centro dell'anca (zb, metri), larghezza dei volumi, solco, incavo sul lato.
+    def gl_sec(t, w, h, oy, off, zb, sg, solco, incavo):
+        b = (zb + oy) / (0.809 * h) if zb else 1.0; amt = max(0.0, b - 1)
+        bumps = [(0.5 - off, amt, sg), (0.5 + off, amt, sg)] if amt else []
+        if solco: bumps.append((0.5, -solco, 0.018))
+        if incavo: bumps += [(0.5 + sd * 0.2, -incavo, 0.035) for sd in (1, -1)]
+        return dict(t=t, w=w, h=h, oy=oy, bumps=bumps)
+    pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065, LK[0])),
+                   gl_sec(-0.03, 0.112, 0.088, 0.004, 0.09, 0.098, 0.065, 0.02, 0.0),
+                   gl_sec(0.0, 0.134, 0.096, -0.006, 0.09, 0.128, 0.062, 0.05, 0.03),
+                   gl_sec(0.035, 0.158, 0.1, -0.012, 0.088, 0.143, 0.06, 0.07, 0.06),
+                   gl_sec(0.07, 0.166, 0.098, -0.016, 0.085, 0.148, 0.06, 0.08, 0.06),
+                   gl_sec(0.105, 0.152, 0.09, -0.02, 0.08, 0.145, 0.058, 0.08, 0.04),
+                   gl_sec(0.135, 0.112, 0.072, -0.026, 0.07, 0.135, 0.055, 0.07, 0.0),
+                   gl_sec(0.158, 0.08, 0.055, -0.032, 0.062, 0.115, 0.05, 0.06, 0.0),
+                   gl_sec(0.175, 0.055, 0.04, -0.038, 0.058, 0.085, 0.045, 0.0, 0.0),
+                   dict(t=0.186, w=0.03, h=0.02, oy=-0.045)]
 corpo()                                             # bacino liscio come un manichino; le cosce vi entrano dai giunti delle anche
 build('anca_corpo', 'anca', loft(pelvis_secs, N=40, step=0.02, mat='pelle'), extras={'regione': 'bacino'})
 BRAS = S.get('brasiliana', 0.0)
 pezzo('intimo', 'brasiliana' if BRAS else 'culotte')
 tc = S.get('vita_culotte', -0.035)                    # dove comincia la culotte (più in basso = vita bassa)
+tcd = S.get('vita_culotte_dietro', tc)                # dietro il bordo può salire (brasiliana: in cima ai glutei)
+t_start = lambda a: tcd + (tc0 - tcd) * ((1 + cos(a * TAU)) / 2) ** 1.5
+tc0, tc = tc, min(tc, tcd)
 i_ = max(k for k in range(len(pelvis_secs) - 1) if pelvis_secs[k]['t'] <= tc); p0_, p1_ = pelvis_secs[i_], pelvis_secs[i_ + 1]; f_ = (tc - p0_['t']) / (p1_['t'] - p0_['t'])
-cul = [dict(t=tc, w=p0_['w'] + (p1_['w'] - p0_['w']) * f_ + 0.002, h=p0_['h'] + (p1_['h'] - p0_['h']) * f_ + 0.002)] + [dict(s, w=s['w'] + 0.002, h=s['h'] + 0.002) for s in pelvis_secs[i_ + 1:]]
-culotte = loft(cul, N=40, step=0.02, caps=(False, True), mat='seta' if BRAS else 'lino')
+cul = [dict(t=tc, w=p0_['w'] + (p1_['w'] - p0_['w']) * f_ + 0.002, h=p0_['h'] + (p1_['h'] - p0_['h']) * f_ + 0.002)] + [dict(s, w=s['w'] + 0.002, h=s['h'] + 0.002) for s in pelvis_secs[i_ + 1:] if s['t'] <= 0.15]   # l'intimo arriva al cavallo
+culotte = loft(cul, N=40, step=0.012 if BRAS else 0.02, caps=(False, True), mat='seta' if BRAS else 'lino')
 EDGE_ = []
 if S.get('sgambato'):                                # taglio alto: ai fianchi il bordo sale seguendo la piega delle gambe
     N_ = 40; rows_ = (len(culotte.v) - 1) // N_
     for i in range(N_):
-        a = i / N_; side = abs(sin(a * TAU)) ** 1.2; t_end = 0.145 - (0.145 - (tc + 0.03)) * S['sgambato'] * side
-        if BRAS and cos(a * TAU) < 0:                    # brasiliana: dietro copre solo la parte centrale dei glutei, con un taglio a V
-            db = abs(((a - 0.5) + 0.5) % 1 - 0.5); t_end = min(t_end, 0.145 - (0.145 - (tc + 0.012)) * min(1.0, db / 0.17) ** 1.1)
-        keep = max([r for r in range(rows_) if -culotte.v[r * N_ + i][1] <= t_end] or [0])
-        for r in range(keep + 1, rows_): culotte.v[r * N_ + i] = culotte.v[keep * N_ + i]
-        if BRAS: EDGE_.append(culotte.v[keep * N_ + i])
+        a = i / N_; ts_ = t_start(a); side = abs(sin(a * TAU)) ** 1.2; t_end = 0.145 - (0.145 - (ts_ + 0.03)) * S['sgambato'] * side
+        if BRAS and cos(a * TAU) < 0:                    # brasiliana: dietro copre solo la parte centrale e alta dei glutei, con un taglio a V
+            db = abs(((a - 0.5) + 0.5) % 1 - 0.5); t_end = min(t_end, 0.145 - (0.145 - (ts_ + 0.015)) * min(1.0, db / 0.17) ** 1.1)
+        col_ = [culotte.v[r * N_ + i] for r in range(rows_)]; tv_ = [-v[1] for v in col_]
+        lerp_ = lambda r, t: tuple(col_[r][k] + (col_[r + 1][k] - col_[r][k]) * (t - tv_[r]) / ((tv_[r + 1] - tv_[r]) or 1) for k in range(3))
+        keep = max([r for r in range(rows_) if tv_[r] <= t_end] or [0])
+        pb = lerp_(keep, t_end) if keep + 1 < rows_ else col_[keep]          # il bordo cade dove deve, fra due file (niente gradini)
+        for r in range(keep + 1, rows_): culotte.v[r * N_ + i] = pb
+        if BRAS:
+            r0_ = min([r for r in range(rows_) if tv_[r] >= ts_ - 1e-6] or [0])   # bordo in vita inclinato
+            pt = lerp_(r0_ - 1, ts_) if r0_ > 0 else col_[0]
+            for r in range(r0_): culotte.v[r * N_ + i] = pt
+            EDGE_.append(pb)
 build('anca_brasiliana' if BRAS else 'anca_culotte', 'anca', culotte, extras={'regione': 'bacino'})
 if BRAS:                                             # profili dorati sul bordo in vita e sulle sgambature, come il dudou
     D('anca').add(tube([culotte.v[i] for i in range(40)], 0.0016, 4, True, 'bordo'))
@@ -877,7 +910,7 @@ fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -(S[
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
     KC = S['cosce']; KC2 = 1 + (KC - 1) * 0.45; CK = S.get('cosce_k', (1, 1, 1, 1))
-    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw * KC * CK[0], h=0.064 * lw * KC), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC * CK[1], h=0.08 * lw * KC),   # cima a cupola: niente gradino sui fianchi
+    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw * KC * CK[0], h=0.064 * lw * KC * CK[0]), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC * CK[1], h=0.08 * lw * KC * CK[1]),   # cima a cupola: niente gradino sui fianchi
                   dict(t=0.1, w=(0.074 + 0.006) * lw * KC * CK[2], h=0.084 * lw * KC, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw * KC2 * CK[3], h=0.07 * lw * KC2, oy=0.006),
                   dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
     shin_secs = [dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
