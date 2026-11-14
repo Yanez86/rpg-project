@@ -60,7 +60,7 @@ MISURE = {
     'wuxia': dict(hip=1.16, thigh=0.51, shin=0.49, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.28, shoulder=0.163, shoulderDrop=0.045,
                   upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.3, glutei_k=(0.6, 1.15, 1.2, 0.85, 0.35), glutei_a=0.095, glutei_s=0.066, glutei_solco=0.07, anca_mezzo=1.0, lombi_k=(0.5, 0.0),
                   anca_w=(0.13, 0.158, 0.176, 0.188, 0.11), cosce_k=(0.6, 0.75, 1.06, 1.0),
-                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, glutei_sporgenza=0.45, solco_sale=0.022, fondi_cosce=1.0, cosce_cima=((-0.068, 0.034, 0.035, -0.005), (-0.05, 0.046, 0.05, -0.01), (-0.02, 0.066, 0.06, -0.012), (0.01, 0.08, 0.07, -0.008)), collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
+                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.22, reni=(-0.05, 0.085, 0.045), cifosi=0.04, collo_indietro=0.018, testa_avanti=0.008, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, glutei_sporgenza=0.45, solco_sale=0.022, fondi_cosce=1.0, cosce_cima=((-0.068, 0.034, 0.035, -0.005), (-0.05, 0.046, 0.05, -0.01), (-0.02, 0.066, 0.06, -0.012), (0.01, 0.08, 0.07, -0.008)), collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
 }
 S = MISURE[MOD]
 # viso: l'elfa ha l'ovale lungo che si affina in un mento piccolo; wuxia un viso più tondo e morbido, guance piene, naso piccolo
@@ -290,6 +290,8 @@ def probe(bvh, origin, direction, off=0.0):
 def build(name, joint_name, g, mods=(), sharp=None, extras=None, tags=None):
     ky = scala_y(joint_name, name); vs = [(p[0], p[1] * ky, p[2]) for p in g.v] if ky != 1.0 else g.v   # busto più corto, braccia più lunghe
     if ky != 1.0 and name.endswith('_mano'): vs = [(p[0], p[1] - (ky - 1) * 0.262, p[2]) for p in g.v]   # la mano non si allunga: scende con il polso
+    dz = {'testa': S.get('testa_avanti', 0.0), 'collo': -S.get('collo_indietro', 0.0)}.get(joint_name, 0.0)
+    if dz: vs = [(p[0], p[1], p[2] + dz) for p in vs]      # mascella libera: collo un poco indietro, testa un poco avanti (il perno resta sul collo)
     me = bpy.data.meshes.new(name); me.from_pydata([tb(p) for p in vs], [], g.f)
     uvl = me.uv_layers.new(name='UVMap')
     for p in me.polygons:
@@ -545,17 +547,32 @@ torso_secs = [
     # spalle morbide e basse: dal braccio al collo la linea scende piano (trapezio), più piena dietro; il collo resta lungo
     dict(t=-0.445, w=0.132 * KS, h=0.092, oy=-0.008), dict(t=-0.462, w=0.118 * KS, h=0.084, oy=-0.011), dict(t=-0.478, w=0.095 * KS, h=0.074, oy=-0.012),
     dict(t=-0.492, w=0.072 * KS, h=0.062, oy=-0.01), dict(t=-0.505, w=0.056, h=0.05, oy=-0.008), dict(t=-0.512, w=0.048, h=0.044, oy=-0.006)]
+# La curva delle reni (lordosi) si misura in METRI dal giunto del busto (tb, positivo in giù): la stessa funzione serve al busto
+# (tb = t * KT) e al bacino (tb = t + 0,05), così le due parti coincidono alla giuntura anche se il busto si accorcia.
+# reni = (centro, ampiezza in altezza, quanto va avanti la vita): una curva lunga e morbida, non una strozzatura sopra il bacino.
+RC, RW, RA = S.get('reni', (-0.07, 0.09, 0.05))
+def lordosi_m(tb):
+    """rigonfiamento negativo dietro (le reni rientrano), in metri"""
+    L = S.get('lordosi', 0.0); return [(0.5, -L * exp(-((tb - RC) / RW) ** 2), 0.13)] if L else []
+def lordosi_oy(tb):
+    """con la curva la vita va un poco avanti"""
+    return RA * S.get('lordosi', 0.0) * exp(-((tb - RC) / (RW * 1.1)) ** 2)
 def dorso(t):
-    """schiena (t del busto): le reni rientrano sopra i glutei (lordosi), solco della colonna, scapole appena in rilievo"""
-    L, B = S.get('lordosi', 0.0), S.get('schiena', 0.0); out = []
-    if L: out.append((0.5, -L * exp(-((t + 0.07) / 0.09) ** 2), 0.13))
+    """schiena (t del busto, in unità del busto disegnato): solco della colonna, scapole appena in rilievo, dorso arrotondato (cifosi)"""
+    B, C = S.get('schiena', 0.0), S.get('cifosi', 0.0); out = []
     if B and t > -0.44: out.append((0.5, -0.035 * B, 0.018))
     if B: out += [(0.5 + sd * 0.1, 0.05 * B * exp(-((t + 0.38) / 0.05) ** 2), 0.05) for sd in (1, -1)]
+    if C: out.append((0.5, C * exp(-((t + 0.31) / 0.1) ** 2), 0.17))
     return out
 if S.get('lordosi') or S.get('schiena'):
     for s_ in torso_secs:
-        s_['bumps'] = s_.get('bumps', []) + dorso(s_['t'])
-        s_['oy'] = s_.get('oy', 0.0) + 0.05 * S.get('lordosi', 0.0) * exp(-((s_['t'] + 0.07) / 0.1) ** 2)   # con la curva la vita va un poco avanti
+        s_['bumps'] = s_.get('bumps', []) + dorso(s_['t']) + lordosi_m(s_['t'] * KT)
+        s_['oy'] = s_.get('oy', 0.0) + lordosi_oy(s_['t'] * KT)
+if S.get('glutei_scolpiti'):                          # il fondo del busto rientra nel bacino scolpito: alla vita nessun bordo che sporge
+    torso_secs[0] = dict(torso_secs[0], w=torso_secs[0]['w'] - 0.008, h=torso_secs[0]['h'] - 0.008)
+CI = S.get('collo_indietro', 0.0)                    # la base del collo (trapezio) va indietro con il collo: mascella libera davanti
+if CI:
+    for s_ in torso_secs: s_['oy'] = s_.get('oy', 0.0) - CI * sm(0.44, 0.505, -s_['t'])
 
 def inviluppo(xs, zs):
     """la stoffa tesa non entra negli incavi: per ogni punto, il massimo fra i segmenti tesi sopra di lui (inviluppo superiore)"""
@@ -689,8 +706,8 @@ GK, GA, GS = S.get('glutei_k', (0, 1, 1.1, 0.5, 0)), S.get('glutei_a', 0.075), S
 AW = S.get('anca_w')
 LK, IN, LO = S.get('lombi_k', (1, 1)), S.get('inclina', (0, -0.03, -0.04, -0.03, 0)), S.get('lordosi', 0.0)
 glutei = lambda k: ([(0.5 - GA, S['glutei'] * k, GS), (0.5 + GA, S['glutei'] * k, GS)] + ([(0.5, -S['glutei_solco'] * k, 0.02)] if S.get('glutei_solco') else [])) if k else []   # due volumi tondi, solco al centro
-lombi = lambda t, k: [(a_, m_ * k, s_) for a_, m_, s_ in dorso(t + 0.05) if s_ > 0.1] if LO and k else []   # le reni entrano nel bacino (t del busto = t + 0,05)
-avanti = lambda t: 0.05 * S.get('lordosi', 0.0) * exp(-((t + 0.05 + 0.07) / 0.1) ** 2)       # la vita va avanti come nel busto: la linea continua senza tacca
+lombi = lambda t, k: [(a_, m_ * k, s_) for a_, m_, s_ in lordosi_m(t + 0.05)] if LO and k else []   # le reni entrano nel bacino (t del busto = t + 0,05)
+avanti = lambda t: lordosi_oy(t + 0.05) if LO else 0.0                                   # la vita va avanti come nel busto: la linea continua senza tacca
 pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065, LK[0])),
                dict(t=-0.01, w=AW[0] if AW else (S['waist'] + S['hips']) / 2 * W - 0.012 - S.get('anca_raccordo', 0.0), h=0.115 * W - 0.008, oy=avanti(-0.01) + IN[0] * LO, bumps=lombi(-0.01, LK[1]) + glutei(GK[0])),
                *([dict(t=0.015, w=AW[1] if AW else (S['waist'] + S['hips']) / 2 * W * 0.45 + (hipW - 0.02) * 0.55 + 0.004, h=0.122 * W - 0.01, oy=-0.004 + (IN[0] + IN[1]) / 2 * LO,
@@ -712,7 +729,13 @@ if S.get('glutei_scolpiti'):
         if solco: bumps.append((0.5, -solco, 0.02))
         if incavo: bumps += [(0.5 + sd * 0.2, -incavo, 0.035) for sd in (1, -1)]
         return dict(t=t, w=w, h=h, oy=oy, bumps=bumps)
-    pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065, LK[0])),
+    def sez_busto(t, d):
+        """la sezione del busto all'altezza t del bacino (interpolata), stretta di d: la cima del bacino nasce dentro il busto, senza gradino"""
+        tT = (t + 0.05) / KT; k = max(i for i in range(len(torso_secs) - 1) if torso_secs[i]['t'] >= tT) if tT <= torso_secs[0]['t'] else 0
+        a_, b_ = torso_secs[k], torso_secs[k + 1]; f = max(0.0, min(1.0, (tT - a_['t']) / (b_['t'] - a_['t'])))
+        ip = lambda q: a_.get(q, 0.0) + (b_.get(q, 0.0) - a_.get(q, 0.0)) * f
+        return dict(t=t, w=ip('w') - d, h=ip('h') - d, oy=ip('oy'), bumps=dorso(tT) + lordosi_m(t + 0.05))
+    pelvis_secs = [sez_busto(-0.065, 0.009),
                    gl_sec(-0.03, 0.112, 0.088, 0.004, 0.09, 0.098, 0.065, 0.02, 0.0),
                    gl_sec(0.0, 0.134, 0.096, -0.006, 0.09, 0.128, 0.062, 0.05, 0.015),
                    gl_sec(0.035, 0.158, 0.1, -0.012, 0.09, 0.143, 0.06, 0.07, 0.02),
