@@ -46,15 +46,20 @@ def V(*a): return Vector(a)
 # gambe lunghe (cavallo a circa metà altezza, ginocchio a 0,29); circa 1,72 m.
 # seno, glutei: quanto sporgono (rigonfiamenti del loft); collo_r: raggio del collo; cosce: quanto sono piene in alto
 # (i fianchi li disegnano le cosce: con le cosce piene la figura diventa a clessidra senza toccare le ginocchia);
-# glutei_k: quanto sporgono i glutei nelle sezioni del bacino dall'alto in basso, glutei_a/_s: dove (giri dal centro della
-# schiena) e quanto larghi; lordosi: quanto rientrano le reni (curva della schiena); schiena: solco della colonna e scapole. Finiscono nel modello (userData.misure del
+# glutei_k: quanto sporgono i glutei nelle sezioni del bacino dall'alto in basso (t -0,01, 0,04, 0,085, 0,12, 0,145): pieni
+# già in alto, il punto più pieno a metà, il fondo che si arrotonda; glutei_a/_s: dove (giri dal centro della schiena) e quanto
+# larghi; lombi_k: quanto la curva delle reni entra nelle prime due sezioni del bacino; inclina: di quanto ogni sezione va
+# indietro (per la lordosi, il bacino inclinato); anca_w: larghezza del bacino per sezione (t -0,01, 0,015, 0,04, 0,085, 0,12):
+# il fianco più largo in basso, all'altezza del cavallo; cosce_k: quanto sono larghe le cosce in cima (cupola stretta: niente
+# spigolo sui fianchi) e più giù; brasiliana: l'intimo di sotto è una brasiliana di seta invece della culotte; lordosi: quanto rientrano le reni (curva della schiena); schiena: solco della colonna e scapole. Finiscono nel modello (userData.misure del
 # nodo radice), così il motore e la prova di fumo usano le stesse.
 MISURE = {
     'elfa': dict(hip=1.06, thigh=0.5, shin=0.4, W=0.84, chest=0.16, waist=0.125, hips=0.21, torso=0.46, shoulder=0.165, shoulderDrop=0.05,
                  upper=0.34, fore=0.32, skirt=0.5, flare=1.38, neck=0.07, head=0.94, armW=0.8, legW=0.86, bust=1, seno=0.25, glutei=0.07, collo_r=0.045, cosce=1.0),
     'wuxia': dict(hip=0.965, thigh=0.4, shin=0.405, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.42, shoulder=0.148, shoulderDrop=0.045,
-                  upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.28, glutei_k=(1.0, 1.3, 1.15, 0.6), glutei_a=0.08, glutei_s=0.08,
-                  lordosi=0.3, schiena=1.0, anca_raccordo=0.014, collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005),
+                  upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.3, glutei_k=(0.6, 1.15, 1.2, 0.85, 0.35), glutei_a=0.095, glutei_s=0.066, glutei_solco=0.07, anca_mezzo=1.0, lombi_k=(0.5, 0.0),
+                  anca_w=(0.13, 0.158, 0.176, 0.188, 0.11), cosce_k=(0.6, 0.75, 1.06, 1.0),
+                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005),
 }
 S = MISURE[MOD]
 # viso: l'elfa ha l'ovale lungo che si affina in un mento piccolo; wuxia un viso più tondo e morbido, guance piene, naso piccolo
@@ -669,28 +674,40 @@ if ELF:
 
 # ================================================================= ANCA: bacino nudo, culotte, baschina, gonna in due metà
 hipW = S['hips'] * W
-GK, GA, GS = S.get('glutei_k', (1, 1.1, 0.5, 0)), S.get('glutei_a', 0.075), S.get('glutei_s', 0.06)
-glutei = lambda k: [(0.5 - GA, S['glutei'] * k, GS), (0.5 + GA, S['glutei'] * k, GS)] if k else []
-lombi = lambda t: [b_ for b_ in dorso(t + 0.05) if b_[2] > 0.1] if S.get('lordosi') else []   # le reni continuano nel bacino (t del busto = t + 0,05)
+GK, GA, GS = S.get('glutei_k', (0, 1, 1.1, 0.5, 0)), S.get('glutei_a', 0.075), S.get('glutei_s', 0.06)
+AW = S.get('anca_w')
+LK, IN, LO = S.get('lombi_k', (1, 1)), S.get('inclina', (0, -0.03, -0.04, -0.03, 0)), S.get('lordosi', 0.0)
+glutei = lambda k: ([(0.5 - GA, S['glutei'] * k, GS), (0.5 + GA, S['glutei'] * k, GS)] + ([(0.5, -S['glutei_solco'] * k, 0.02)] if S.get('glutei_solco') else [])) if k else []   # due volumi tondi, solco al centro
+lombi = lambda t, k: [(a_, m_ * k, s_) for a_, m_, s_ in dorso(t + 0.05) if s_ > 0.1] if LO and k else []   # le reni entrano nel bacino (t del busto = t + 0,05)
 avanti = lambda t: 0.05 * S.get('lordosi', 0.0) * exp(-((t + 0.05 + 0.07) / 0.1) ** 2)       # la vita va avanti come nel busto: la linea continua senza tacca
-pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065)),
-               dict(t=-0.01, w=(S['waist'] + S['hips']) / 2 * W - 0.012 - S.get('anca_raccordo', 0.0), h=0.115 * W - 0.008, oy=avanti(-0.01), bumps=lombi(-0.01)),
-               dict(t=0.04, w=hipW - 0.02, h=0.13 * W - 0.014, oy=-0.006 - 0.03 * S.get('lordosi', 0.0), bumps=glutei(GK[0])), dict(t=0.085, w=hipW - 0.026, h=0.11 * W, oy=-0.01 - 0.04 * S.get('lordosi', 0.0), bumps=glutei(GK[1])),
-               dict(t=0.12, w=0.1, h=0.068, oy=-0.008 - 0.03 * S.get('lordosi', 0.0), bumps=glutei(GK[2])), dict(t=0.145, w=0.045, h=0.035, oy=-0.004, bumps=glutei(GK[3]))]   # con la curva il bacino si inclina: i glutei vanno indietro   # le cosce disegnano la linea dei fianchi
+pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065, LK[0])),
+               dict(t=-0.01, w=AW[0] if AW else (S['waist'] + S['hips']) / 2 * W - 0.012 - S.get('anca_raccordo', 0.0), h=0.115 * W - 0.008, oy=avanti(-0.01) + IN[0] * LO, bumps=lombi(-0.01, LK[1]) + glutei(GK[0])),
+               *([dict(t=0.015, w=AW[1] if AW else (S['waist'] + S['hips']) / 2 * W * 0.45 + (hipW - 0.02) * 0.55 + 0.004, h=0.122 * W - 0.01, oy=-0.004 + (IN[0] + IN[1]) / 2 * LO,
+                      bumps=glutei((GK[0] + GK[1]) / 2))] if S.get('anca_mezzo') else []),   # sezione in mezzo: il fianco si arrotonda senza spigolo
+               dict(t=0.04, w=AW[2] if AW else hipW - 0.02, h=0.13 * W - 0.014, oy=-0.006 + IN[1] * LO, bumps=glutei(GK[1])), dict(t=0.085, w=AW[3] if AW else hipW - 0.026, h=0.11 * W, oy=-0.01 + IN[2] * LO, bumps=glutei(GK[2])),
+               dict(t=0.12, w=AW[4] if AW else 0.1, h=0.068, oy=-0.008 + IN[3] * LO, bumps=glutei(GK[3])), dict(t=0.145, w=0.045, h=0.035, oy=-0.004 + IN[4] * LO, bumps=glutei(GK[4]))]   # con la curva il bacino si inclina: i glutei vanno indietro   # le cosce disegnano la linea dei fianchi
 corpo()                                             # bacino liscio come un manichino; le cosce vi entrano dai giunti delle anche
 build('anca_corpo', 'anca', loft(pelvis_secs, N=40, step=0.02, mat='pelle'), extras={'regione': 'bacino'})
-pezzo('intimo', 'culotte')
+BRAS = S.get('brasiliana', 0.0)
+pezzo('intimo', 'brasiliana' if BRAS else 'culotte')
 tc = S.get('vita_culotte', -0.035)                    # dove comincia la culotte (più in basso = vita bassa)
 i_ = max(k for k in range(len(pelvis_secs) - 1) if pelvis_secs[k]['t'] <= tc); p0_, p1_ = pelvis_secs[i_], pelvis_secs[i_ + 1]; f_ = (tc - p0_['t']) / (p1_['t'] - p0_['t'])
 cul = [dict(t=tc, w=p0_['w'] + (p1_['w'] - p0_['w']) * f_ + 0.002, h=p0_['h'] + (p1_['h'] - p0_['h']) * f_ + 0.002)] + [dict(s, w=s['w'] + 0.002, h=s['h'] + 0.002) for s in pelvis_secs[i_ + 1:]]
-culotte = loft(cul, N=40, step=0.02, caps=(False, True), mat='lino')
+culotte = loft(cul, N=40, step=0.02, caps=(False, True), mat='seta' if BRAS else 'lino')
+EDGE_ = []
 if S.get('sgambato'):                                # taglio alto: ai fianchi il bordo sale seguendo la piega delle gambe
     N_ = 40; rows_ = (len(culotte.v) - 1) // N_
     for i in range(N_):
         a = i / N_; side = abs(sin(a * TAU)) ** 1.2; t_end = 0.145 - (0.145 - (tc + 0.03)) * S['sgambato'] * side
+        if BRAS and cos(a * TAU) < 0:                    # brasiliana: dietro copre solo la parte centrale dei glutei, con un taglio a V
+            db = abs(((a - 0.5) + 0.5) % 1 - 0.5); t_end = min(t_end, 0.145 - (0.145 - (tc + 0.012)) * min(1.0, db / 0.17) ** 1.1)
         keep = max([r for r in range(rows_) if -culotte.v[r * N_ + i][1] <= t_end] or [0])
         for r in range(keep + 1, rows_): culotte.v[r * N_ + i] = culotte.v[keep * N_ + i]
-build('anca_culotte', 'anca', culotte, extras={'regione': 'bacino'})
+        if BRAS: EDGE_.append(culotte.v[keep * N_ + i])
+build('anca_brasiliana' if BRAS else 'anca_culotte', 'anca', culotte, extras={'regione': 'bacino'})
+if BRAS:                                             # profili dorati sul bordo in vita e sulle sgambature, come il dudou
+    D('anca').add(tube([culotte.v[i] for i in range(40)], 0.0016, 4, True, 'bordo'))
+    D('anca').add(tube(EDGE_, 0.0016, 4, True, 'bordo'))
 
 if ELF:
     # La gonna sotto i fianchi è divisa in due metà appese ai giunti cosciaS/D: camminando seguono la gamba invece di farsi
@@ -859,9 +876,9 @@ for s in (1, -1):
 fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -(S['hip'] - 0.06 - S['thigh']) - fy   # centro del piede e suolo rispetto al ginocchio
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
-    KC = S['cosce']; KC2 = 1 + (KC - 1) * 0.45
-    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw * KC, h=0.064 * lw * KC), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC, h=0.08 * lw * KC),   # cima a cupola: niente gradino sui fianchi
-                  dict(t=0.1, w=(0.074 + 0.006) * lw * KC, h=0.084 * lw * KC, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw * KC2, h=0.07 * lw * KC2, oy=0.006),
+    KC = S['cosce']; KC2 = 1 + (KC - 1) * 0.45; CK = S.get('cosce_k', (1, 1, 1, 1))
+    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw * KC * CK[0], h=0.064 * lw * KC), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC * CK[1], h=0.08 * lw * KC),   # cima a cupola: niente gradino sui fianchi
+                  dict(t=0.1, w=(0.074 + 0.006) * lw * KC * CK[2], h=0.084 * lw * KC, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw * KC2 * CK[3], h=0.07 * lw * KC2, oy=0.006),
                   dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
     shin_secs = [dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
                  dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw), dict(t=S['shin'] * 0.89, w=0.031, h=0.035, oy=-0.004), dict(t=S['shin'] + 0.022, w=0.029, h=0.033, oy=-0.004)]

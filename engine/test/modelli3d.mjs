@@ -30,10 +30,10 @@ const MODELLI = [
       if (vede(['borsello'], t => t.pezzo === 'borsello')) fail('il borsello senza cintura non deve vedersi');
     } },
   { nome: 'wuxia', set: setWuxia3d, crea: wuxia3d, materiali: WUXIA3D_MATERIALS, altezza: [1.65, 1.8],
-    capi: ['dudou', 'culotte', 'capelli', 'fermagli'],
+    capi: ['dudou', 'brasiliana', 'capelli', 'fermagli'],
     prove: vede => {
       if (vede(['fermagli'], t => t.pezzo === 'fermagli')) fail('i fermagli senza capelli non devono vedersi');
-      if (!vede(['dudou', 'culotte'], t => t.pezzo === 'dudou')) fail('il dudou deve vedersi');
+      if (!vede(['dudou', 'brasiliana'], t => t.pezzo === 'dudou') || !vede(['dudou', 'brasiliana'], t => t.pezzo === 'brasiliana')) fail('dudou e brasiliana devono vedersi');
     } },
 ];
 
