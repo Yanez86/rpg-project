@@ -1,6 +1,6 @@
 // Wuxia: una donna adulta da romanzo wuxia modellata in Blender (engine/tools/blender/personaggi.py --modello wuxia →
-// engine/assets/wuxia.glb). Personaggio originale: proporzioni prese da una foto di riferimento, tratti femminili accentuati
-// un poco (figura a clessidra: vita sottile, fianchi pieni, seno e glutei più pronunciati), senza dettagli espliciti.
+// engine/assets/wuxia.glb). Personaggio originale: proporzioni di un basemesh da scultura (gambe lunghe, busto corto), tratti
+// femminili accentuati un poco (figura a clessidra: vita sottile, fianchi pieni, seno e glutei più pronunciati), senza dettagli espliciti.
 // Strati: corpo base liscio, intimo (dudou e brasiliana di seta), capelli raccolti in due chignon, fermagli a fiore.
 // Stessi giunti e stesse clip dell'elfa (villagerClips), materiali dal motore (humanMats), cel shading con setToon().
 // Uso:  await loadWuxia3d();  const w = wuxia3d();  scene.add(w.root); w.anim.play('cammina'); setToon(w.root, true)

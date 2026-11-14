@@ -57,7 +57,7 @@ def V(*a): return Vector(a)
 MISURE = {
     'elfa': dict(hip=1.06, thigh=0.5, shin=0.4, W=0.84, chest=0.16, waist=0.125, hips=0.21, torso=0.46, shoulder=0.165, shoulderDrop=0.05,
                  upper=0.34, fore=0.32, skirt=0.5, flare=1.38, neck=0.07, head=0.94, armW=0.8, legW=0.86, bust=1, seno=0.25, glutei=0.07, collo_r=0.045, cosce=1.0),
-    'wuxia': dict(hip=0.965, thigh=0.4, shin=0.405, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.42, shoulder=0.148, shoulderDrop=0.045,
+    'wuxia': dict(hip=1.16, thigh=0.51, shin=0.49, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.28, shoulder=0.163, shoulderDrop=0.045,
                   upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.3, glutei_k=(0.6, 1.15, 1.2, 0.85, 0.35), glutei_a=0.095, glutei_s=0.066, glutei_solco=0.07, anca_mezzo=1.0, lombi_k=(0.5, 0.0),
                   anca_w=(0.13, 0.158, 0.176, 0.188, 0.11), cosce_k=(0.6, 0.75, 1.06, 1.0),
                   inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, solco_sale=0.022, fondi_cosce=1.0, cosce_cima=((-0.068, 0.034, 0.035, -0.005), (-0.05, 0.046, 0.05, -0.01), (-0.02, 0.066, 0.06, -0.012), (0.01, 0.08, 0.07, -0.008)), collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
