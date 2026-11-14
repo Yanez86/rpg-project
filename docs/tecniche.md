@@ -36,6 +36,7 @@ I nomi usati durante il lavoro, con una spiegazione breve. Utile per parlarne e 
 | **Base mesh** (corpo base) | corpo neutro su cui si costruiscono e si indossano tutti i vestiti | corpo dell'elfa di Blender |
 | **Layered clothing** (vestiti a strati) | i capi sono pezzi separati, a strati (intimo, abiti, accessori), che si mettono e si tolgono | guardaroba dell'elfa |
 | **Body masking** (regioni nascoste) | le parti del corpo coperte da un capo si nascondono, così non bucano la stoffa | `nasconde` / `scegliVisibili` |
+| **Raccordo fra pezzi rigidi** (aderire e rientrare) | dove un pezzo deve continuare in un altro, il primo si appoggia alla superficie del secondo appena fuori e scendendo ci rientra piano: il contorno passa dall'uno all'altro senza punta | fianco e glutei di wuxia che scendono nella coscia (`gl_def`) |
 | **Rigid skinning** (marionetta) | ogni pezzo segue un solo giunto, senza deformarsi | tutti i personaggi; la gonna dell'elfa di Blender divisa sui giunti delle cosce |
 | **LatheGeometry** (tornitura) | solido ottenuto ruotando un profilo | lanterne |
 | **Extrude** (estrusione) | solido ottenuto spingendo una sagoma 2D | insegne, ponte |

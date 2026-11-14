@@ -51,7 +51,8 @@ def V(*a): return Vector(a)
 # larghi; lombi_k: quanto la curva delle reni entra nelle prime due sezioni del bacino; inclina: di quanto ogni sezione va
 # indietro (per la lordosi, il bacino inclinato); anca_w: larghezza del bacino per sezione (t -0,01, 0,015, 0,04, 0,085, 0,12):
 # il fianco più largo in basso, all'altezza del cavallo; cosce_k: quanto sono larghe le cosce in cima (cupola stretta: niente
-# spigolo sui fianchi) e più giù; brasiliana: l'intimo di sotto è una brasiliana di seta invece della culotte; lordosi: quanto rientrano le reni (curva della schiena); schiena: solco della colonna e scapole. Finiscono nel modello (userData.misure del
+# spigolo sui fianchi) e più giù; cosce_cima: la cima della coscia sezione per sezione (t, larghezza, profondità, avanti), dentro il
+# bacino fino al punto più largo del fianco; fondi_cosce: sotto quel punto il lato esterno del gluteo entra nella coscia; brasiliana: l'intimo di sotto è una brasiliana di seta invece della culotte; lordosi: quanto rientrano le reni (curva della schiena); schiena: solco della colonna e scapole. Finiscono nel modello (userData.misure del
 # nodo radice), così il motore e la prova di fumo usano le stesse.
 MISURE = {
     'elfa': dict(hip=1.06, thigh=0.5, shin=0.4, W=0.84, chest=0.16, waist=0.125, hips=0.21, torso=0.46, shoulder=0.165, shoulderDrop=0.05,
@@ -59,7 +60,7 @@ MISURE = {
     'wuxia': dict(hip=0.965, thigh=0.4, shin=0.405, W=0.9, chest=0.156, waist=0.112, hips=0.228, torso=0.42, shoulder=0.148, shoulderDrop=0.045,
                   upper=0.29, fore=0.25, skirt=0.45, flare=1.3, neck=0.06, head=0.88, armW=0.78, legW=0.96, bust=1, seno=0.36, seno_largo=0.5, glutei=0.3, glutei_k=(0.6, 1.15, 1.2, 0.85, 0.35), glutei_a=0.095, glutei_s=0.066, glutei_solco=0.07, anca_mezzo=1.0, lombi_k=(0.5, 0.0),
                   anca_w=(0.13, 0.158, 0.176, 0.188, 0.11), cosce_k=(0.6, 0.75, 1.06, 1.0),
-                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, solco_sale=0.022, collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
+                  inclina=(-0.012, -0.035, -0.04, -0.03, -0.01), lordosi=0.3, schiena=1.0, anca_raccordo=0.014, brasiliana=1.0, glutei_scolpiti=1.0, solco_sale=0.022, fondi_cosce=1.0, cosce_cima=((-0.068, 0.034, 0.035, -0.005), (-0.05, 0.046, 0.05, -0.01), (-0.02, 0.066, 0.06, -0.012), (0.01, 0.08, 0.07, -0.008)), collo_r=0.04, cosce=1.13, sgambato=1.0, vita_culotte=0.005, vita_culotte_dietro=-0.035),
 }
 S = MISURE[MOD]
 # viso: l'elfa ha l'ovale lungo che si affina in un mento piccolo; wuxia un viso più tondo e morbido, guance piene, naso piccolo
@@ -107,7 +108,8 @@ def joint(name, parent, pos):
     if parent: o.parent = J[parent]
     o.location = tb(pos); J[name] = o; return o
 
-joint(MOD, None, (0, 0, 0)); J[MOD]['misure'] = {k: ([float(x) for x in v] if isinstance(v, tuple) else float(v)) for k, v in S.items()}
+joint(MOD, None, (0, 0, 0)); num = lambda v: [num(x) for x in v] if isinstance(v, (tuple, list)) else float(v)   # anche tabelle (tuple di tuple)
+J[MOD]['misure'] = {k: num(v) for k, v in S.items()}
 joint('anca', MOD, (0, S['hip'], 0))
 joint('busto', 'anca', (0, 0.05, 0))
 joint('mantello', 'busto', (0, S['torso'], -0.04))
@@ -672,6 +674,15 @@ if ELF:
     D('busto').add(loft(taper(0, 0.03, 0.006, 0.0025, 0.006, 0.0025, 0, 2), N=8, axis='z', R=0.35, mat='cintura').xform(tr(0.015, 0.0325, bz + 0.001) @ rot(0, PI / 2, 0)))
     build('busto_cintura', 'busto', belt)
 
+def cosce_secs():
+    """sezioni della coscia (t dal giunto dell'anca in giù); servono anche al bacino per fondersi nella coscia"""
+    KC = S['cosce']; KC2 = 1 + (KC - 1) * 0.45; CK = S.get('cosce_k', (1, 1, 1, 1))
+    cima = ([dict(t=c[0], w=c[1], h=c[2], oy=c[3] if len(c) > 3 else 0.0) for c in S['cosce_cima']] if S.get('cosce_cima') else   # cima disegnata sezione per sezione
+            [dict(t=-0.068, w=0.062 * lw * KC * CK[0], h=0.064 * lw * KC * CK[0]), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC * CK[1], h=0.08 * lw * KC * CK[1])])   # cima a cupola: niente gradino sui fianchi
+    return [dict(t=-0.078, w=0.03, h=0.03), *cima,
+            dict(t=0.1, w=(0.074 + 0.006) * lw * KC * CK[2], h=0.084 * lw * KC, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw * KC2 * CK[3], h=0.07 * lw * KC2, oy=0.006),
+            dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
+
 # ================================================================= ANCA: bacino nudo, culotte, baschina, gonna in due metà
 hipW = S['hips'] * W
 GK, GA, GS = S.get('glutei_k', (0, 1, 1.1, 0.5, 0)), S.get('glutei_a', 0.075), S.get('glutei_s', 0.06)
@@ -688,7 +699,7 @@ pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=
                dict(t=0.12, w=AW[4] if AW else 0.1, h=0.068, oy=-0.008 + IN[3] * LO, bumps=glutei(GK[3])), dict(t=0.145, w=0.045, h=0.035, oy=-0.004 + IN[4] * LO, bumps=glutei(GK[4]))]   # con la curva il bacino si inclina: i glutei vanno indietro   # le cosce disegnano la linea dei fianchi
 if S.get('glutei_scolpiti'):
     # Glutei scolpiti su una foto di riferimento (vista di schiena e di tre quarti): attacco alto con il gradino sotto le reni,
-    # due volumi quasi sferici con il punto più sporgente nella metà alta, solco netto, leggero incavo sul lato fra fianco e
+    # due volumi quasi sferici con il punto più sporgente nella metà alta, solco netto, incavo appena accennato fra fianco e
     # gluteo, fondo che si arrotonda e sporge sopra la coscia (il bacino scende un poco più giù del cavallo, dietro le cosce)
     # e piega quasi orizzontale: i due volumi restano centrati sopra le cosce dall'alto fino in fondo (glutei sodi; se si
     # avvicinano al centro andando in basso sembrano cadenti).
@@ -702,20 +713,35 @@ if S.get('glutei_scolpiti'):
         return dict(t=t, w=w, h=h, oy=oy, bumps=bumps)
     pelvis_secs = [dict(t=-0.065, w=S['waist'] * W - 0.003, h=0.102 * W - 0.003, oy=avanti(-0.065), bumps=lombi(-0.065, LK[0])),
                    gl_sec(-0.03, 0.112, 0.088, 0.004, 0.09, 0.098, 0.065, 0.02, 0.0),
-                   gl_sec(0.0, 0.134, 0.096, -0.006, 0.09, 0.128, 0.062, 0.05, 0.03),
-                   gl_sec(0.035, 0.158, 0.1, -0.012, 0.09, 0.143, 0.06, 0.07, 0.06),
-                   gl_sec(0.07, 0.166, 0.098, -0.016, 0.09, 0.148, 0.06, 0.08, 0.06),
-                   gl_sec(0.105, 0.158, 0.092, -0.02, 0.09, 0.145, 0.06, 0.08, 0.04),
-                   gl_sec(0.135, 0.14, 0.082, -0.024, 0.092, 0.134, 0.06, 0.1, 0.02),
+                   gl_sec(0.0, 0.134, 0.096, -0.006, 0.09, 0.128, 0.062, 0.05, 0.015),
+                   gl_sec(0.035, 0.158, 0.1, -0.012, 0.09, 0.143, 0.06, 0.07, 0.02),
+                   gl_sec(0.07, 0.166, 0.098, -0.016, 0.09, 0.148, 0.06, 0.08, 0.015),
+                   gl_sec(0.105, 0.158, 0.092, -0.02, 0.09, 0.145, 0.06, 0.08, 0.0),
+                   gl_sec(0.135, 0.14, 0.082, -0.024, 0.092, 0.134, 0.06, 0.1, 0.0),
                    gl_sec(0.158, 0.122, 0.07, -0.028, 0.094, 0.116, 0.058, 0.14, 0.0),
                    gl_sec(0.172, 0.1, 0.056, -0.032, 0.095, 0.088, 0.056, 0.2, 0.0),
                    dict(t=0.18, w=0.075, h=0.04, oy=-0.036, bumps=[(0.5, -0.3, 0.03)])]   # fondo piatto: la piega sotto i glutei resta orizzontale; il solco si apre in fondo
 corpo()                                             # bacino liscio come un manichino; le cosce vi entrano dai giunti delle anche
 NP = 64 if S.get('glutei_scolpiti') else 40           # più vertici per giro: il solco fra i glutei è più stretto di 1/40 di giro
-def gl_def(p, a, t):
-    """in fondo il solco sale un poco: ogni piega sotto il gluteo è orizzontale e all'interno si alza verso il solco (due volumi, non un blocco)"""
+CS_ = shrink(cosce_secs(), 0.003); XC_ = (0.088 + 0.02) * W     # la coscia nuda e il suo centro (giunto), per la fusione
+def su_coscia(p, keep):
+    """porta il punto p (sistema dell'anca, a riposo) sulla superficie della coscia del suo lato, a keep del raggio (1 = sulla pelle,
+    più di 1 = appena fuori, meno di 1 = dentro), lungo la direzione dal centro della coscia"""
+    tt = -p[1] - 0.06; k = max(0, min(len(CS_) - 2, max(i for i in range(len(CS_)) if CS_[i]['t'] <= tt) if tt >= CS_[0]['t'] else 0))
+    s0, s1 = CS_[k], CS_[k + 1]; f = max(0.0, min(1.0, (tt - s0['t']) / (s1['t'] - s0['t'])))
+    w, h = (s0[q] + (s1[q] - s0[q]) * f for q in ('w', 'h')); oy = s0.get('oy', 0) + (s1.get('oy', 0) - s0.get('oy', 0)) * f
+    cx = math.copysign(XC_, p[0]); dx, dz = p[0] - cx, p[2] - oy; e = 2 / 0.9
+    rho = max(1e-6, (abs(dx / w) ** e + abs(dz / h) ** e) ** (1 / e))
+    return (cx + dx * keep / rho, p[1], oy + dz * keep / rho)
+def gl_def(p, a, t, fuori=0.0):
+    """in fondo il solco sale un poco: ogni piega sotto il gluteo è orizzontale e all'interno si alza verso il solco (due volumi,
+    non un blocco). Lato esterno: dal punto più largo del fianco in giù il bacino aderisce alla coscia, appena fuori, e scendendo
+    ci rientra piano; il gluteo vi si raccorda dal suo centro verso il fianco. Così il fianco passa nella coscia con una linea sola
+    e la piega sotto il gluteo sfuma verso l'esterno invece di finire a punta sul contorno. fuori: di quanto resta fuori un capo"""
     d = a - 0.5; d -= round(d); k = S.get('solco_sale', 0.0) * exp(-(d / 0.035) ** 2) * sm(0.12, 0.18, t)
-    return (p[0], p[1] + k, p[2])
+    q = (p[0], p[1] + k, p[2]); fu = S.get('fondi_cosce', 0.0) * sm(0.03, 0.09, t) * sm(0.08, 0.16, abs(d)) * (1 - sm(0.26, 0.33, abs(d)))
+    if fu <= 0: return q
+    r = su_coscia(q, 1.01 + fuori - 0.13 * sm(0.07, 0.16, t)); return tuple(q[i] + (r[i] - q[i]) * fu for i in range(3))
 build('anca_corpo', 'anca', loft(pelvis_secs, N=NP, step=0.02, mat='pelle', deform=gl_def), extras={'regione': 'bacino'})
 BRAS = S.get('brasiliana', 0.0)
 pezzo('intimo', 'brasiliana' if BRAS else 'culotte')
@@ -725,7 +751,7 @@ t_start = lambda a: tcd + (tc0 - tcd) * ((1 + cos(a * TAU)) / 2) ** 1.5
 tc0, tc = tc, min(tc, tcd)
 i_ = max(k for k in range(len(pelvis_secs) - 1) if pelvis_secs[k]['t'] <= tc); p0_, p1_ = pelvis_secs[i_], pelvis_secs[i_ + 1]; f_ = (tc - p0_['t']) / (p1_['t'] - p0_['t'])
 cul = [dict(t=tc, w=p0_['w'] + (p1_['w'] - p0_['w']) * f_ + 0.002, h=p0_['h'] + (p1_['h'] - p0_['h']) * f_ + 0.002)] + [dict(s, w=s['w'] + 0.002, h=s['h'] + 0.002) for s in pelvis_secs[i_ + 1:] if s['t'] <= 0.15]   # l'intimo arriva al cavallo
-culotte = loft(cul, N=NP, step=0.012 if BRAS else 0.02, caps=(False, True), mat='seta' if BRAS else 'lino', deform=gl_def)
+culotte = loft(cul, N=NP, step=0.012 if BRAS else 0.02, caps=(False, True), mat='seta' if BRAS else 'lino', deform=lambda p, a, t: gl_def(p, a, t, 0.025))
 EDGE_ = []
 if S.get('sgambato'):                                # taglio alto: ai fianchi il bordo sale seguendo la piega delle gambe
     N_ = NP; rows_ = (len(culotte.v) - 1) // N_
@@ -915,10 +941,7 @@ for s in (1, -1):
 fy = -S['shin'] - (S['hip'] - (0.06 + S['thigh'] + S['shin'])) + 0.05; g0 = -(S['hip'] - 0.06 - S['thigh']) - fy   # centro del piede e suolo rispetto al ginocchio
 for s in (1, -1):
     L = 'S' if s > 0 else 'D'
-    KC = S['cosce']; KC2 = 1 + (KC - 1) * 0.45; CK = S.get('cosce_k', (1, 1, 1, 1))
-    thigh_secs = [dict(t=-0.078, w=0.03, h=0.03), dict(t=-0.068, w=0.062 * lw * KC * CK[0], h=0.064 * lw * KC * CK[0]), dict(t=-0.05, w=(0.074 + 0.012) * lw * KC * CK[1], h=0.08 * lw * KC * CK[1]),   # cima a cupola: niente gradino sui fianchi
-                  dict(t=0.1, w=(0.074 + 0.006) * lw * KC * CK[2], h=0.084 * lw * KC, oy=0.01), dict(t=S['thigh'] * 0.62, w=0.064 * lw * KC2 * CK[3], h=0.07 * lw * KC2, oy=0.006),
-                  dict(t=S['thigh'] * 0.9, w=0.056 * lw, h=0.06 * lw), dict(t=S['thigh'] + 0.02, w=0.054 * lw, h=0.058 * lw)]
+    thigh_secs = cosce_secs()
     shin_secs = [dict(t=-0.03, w=0.052 * lw, h=0.058 * lw), dict(t=0.0, w=0.053 * lw, h=0.062 * lw, bumps=[(0.0, 0.18, 0.1)]), dict(t=0.1, w=0.054 * lw, h=0.066 * lw, oy=-0.012),
                  dict(t=S['shin'] * 0.6, w=0.045 * lw, h=0.05 * lw), dict(t=S['shin'] * 0.89, w=0.031, h=0.035, oy=-0.004), dict(t=S['shin'] + 0.022, w=0.029, h=0.033, oy=-0.004)]
     corpo()
